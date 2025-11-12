@@ -6,9 +6,12 @@ import java.net.URL;
 import java.nio.file.*;
 import java.util.*;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import spark.utils.IOUtils;
 
 public class DeckListDifferServer {
+
+    
     public static void main(String[] args) {
         port(4567);
         staticFiles.location("/public");
@@ -264,10 +267,11 @@ public class DeckListDifferServer {
         return total;
     }
 
-    // Access scryfall api to get card price of given cardName
-    private static double fetchCardPrice(String cardName) {
+    // Fetch Card Object from scryfall API
+    private static JSONObject fetchCardJson(String cardName) {
         try {
-            String query = "https://api.scryfall.com/cards/named?fuzzy=" + cardName.trim().replace(" ", "+");
+            String query = "https://api.scryfall.com/cards/named?fuzzy=" +cardName.trim().replace(" ", "+");
+
             @SuppressWarnings("deprecation")
             HttpURLConnection conn = (HttpURLConnection) new URL(query).openConnection();
             conn.setRequestMethod("GET");
@@ -275,19 +279,65 @@ public class DeckListDifferServer {
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             StringBuilder response = new StringBuilder();
             String line;
-            while ((line = bufferedReader.readLine()) != null){
+
+            while ((line = bufferedReader.readLine()) != null) {
                 response.append(line);
             }
             bufferedReader.close();
 
-            JSONObject responseObject = new JSONObject(response.toString());
-            JSONObject prices = responseObject.getJSONObject("prices");
-            String usd = prices.optString("usd", "0.00"); // return 0.00 as fallback
-            return Double.parseDouble(usd);
+            return new JSONObject(response.toString());
         }
         catch (Exception e) {
-            System.err.println("Failed to fetch price for " + cardName + ": " + e.getMessage());
-            return 0.0;
+            System.err.println("Failed to fetch card JSON for " + cardName + ": " + e.getMessage());
+            return null;
         }
     }
-}
+
+    // Access fetched json object to extract card price in USD
+    private static double fetchCardPrice(String cardName) {
+        JSONObject card = fetchCardJson(cardName);
+        if (card == null){
+            return 0.0;
+        }
+        JSONObject prices = card.optJSONObject("prices");
+        if (prices == null){
+            return 0.0;
+        }
+        String usd = prices.optString("usd", "0.0");
+        return Double.parseDouble(usd);        
+
+    }
+
+    
+
+    // TODO
+    // Access fetched json object to extract type line
+    // "artifact", "equipment", etc
+    // Problem: Multiple cards may have multiple type lines
+    private static String fetchTypeLine(String cardName){
+        JSONObject card = fetchCardJson(cardName);
+        if (card == null){
+            return "?";
+        }
+        return card.optString("type_line", "?");
+    }
+
+    // Access fetched json object to extract colors as an array
+    private static List<String> fetchColors(String cardName){
+        JSONObject card = fetchCardJson(cardName);
+        if (card == null){
+            return new ArrayList<>();
+        }
+        JSONArray colorsArray = card.optJSONArray("colors");
+        List<String> colors = new ArrayList<>();
+        
+        if (colorsArray != null){
+            for (int i = 0; i < colorsArray.length(); i++){
+                colors.add(colorsArray.getString(i));
+            }
+        }
+        Collections.sort(colors);
+        return colors;
+    }
+
+    }
