@@ -37,7 +37,7 @@ public class DeckListDifferServer {
             </html>
         """);
 
-        // Handle uploaded decks from post form
+        // ---- Handle Uploaded Decks
         post("/compare", (req, res) -> {
             req.attribute("org.eclipse.jetty.multipartConfig", new javax.servlet.MultipartConfigElement("/tmp"));
 
@@ -105,7 +105,7 @@ public class DeckListDifferServer {
                     <h1>Deck Comparison Results</h1>
             """);
             // Build Cards to Remove, Add, in Common HTML
-            // Card Count - Card Name
+            // Card Name - Card Count
             html.append("<h3>Cards to Remove (").append(totalRemoveCount).append(" Total)</h3><ul>");
             for (var entry : cardsToRemove.entrySet())
                 html.append("<li>").append(entry.getValue()).append(" ").append(entry.getKey()).append("</li>");
@@ -113,7 +113,8 @@ public class DeckListDifferServer {
 
             html.append("<h3>Cards to Add (").append(totalAddCount).append(" Total)</h3><ul>");
             for (var entry : cardsToAdd.entrySet())
-                html.append("<li>").append(entry.getValue()).append(" ").append(entry.getKey()).append("</li>");
+                html.append("<li>").append(entry.getValue()).append(" ").append(entry.getKey()).append(" $").append(String.format("%.2f", fetchCardPrice(entry.getKey()))).append("</li>");
+
             html.append("</ul>");
 
             html.append("<h3>Cards in Common (").append(totalCommonCount).append(" Total)</h3><ul>");
