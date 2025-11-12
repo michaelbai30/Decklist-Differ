@@ -308,8 +308,6 @@ public class DeckListDifferServer {
 
     }
 
-    
-
     // TODO
     // Access fetched json object to extract type line
     // "artifact", "equipment", etc
