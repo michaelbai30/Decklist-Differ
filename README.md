@@ -1,4 +1,4 @@
-# DeckList Differ
+# DeckList Differ for Magic the Gathering; MTG
 
 A lightweight web-based utility to compare a base Magic: The Gathering (MTG) decklist with a prospective upgraded decklist,
 highlighing cards that were added, removed, or kept, along with **real-time card prices** fetched from Scryfall API.
