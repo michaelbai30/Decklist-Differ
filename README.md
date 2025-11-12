@@ -29,7 +29,7 @@ Each line should list the number of copies followed by the card name, like so:**
 
 ```
 4 Lightning Bolt
-6 Mountain
+2 Mountain
 4 Chaos Warp
 ```
 
