@@ -10,8 +10,8 @@ import org.json.JSONArray;
 import spark.utils.IOUtils;
 
 public class DeckListDifferServer {
+    private static final Map<String, JSONObject> cardJsonCache = new HashMap<>();
 
-    
     public static void main(String[] args) {
         port(4567);
         staticFiles.location("/public");
@@ -40,7 +40,7 @@ public class DeckListDifferServer {
             </html>
         """);
 
-        // ---- Handle Uploaded Decks
+        // ---- Handle Uploaded Decks ---
         post("/compare", (req, res) -> {
             req.attribute("org.eclipse.jetty.multipartConfig", new javax.servlet.MultipartConfigElement("/tmp"));
 
@@ -107,23 +107,43 @@ public class DeckListDifferServer {
                 <body>
                     <h1>Deck Comparison Results</h1>
             """);
+
             // Build Cards to Remove, Add, in Common HTML
             // Card Name - Card Count
+
+            // Cards to Remove HTML
             html.append("<h3>Cards to Remove (").append(totalRemoveCount).append(" Total)</h3><ul>");
-            for (var entry : cardsToRemove.entrySet())
-                html.append("<li>").append(entry.getValue()).append(" ").append(entry.getKey()).append("</li>");
+            List<String> sortedRemove = sortCards(cardsToRemove);
+            for (String card : sortedRemove) {
+                int count = cardsToRemove.get(card);
+                String label = buildDisplayLabel(card, count);
+                html.append("<li>").append(label).append("</li>");
+            }
             html.append("</ul>");
 
+            // Cards to Add HTML
             html.append("<h3>Cards to Add (").append(totalAddCount).append(" Total)</h3><ul>");
-            for (var entry : cardsToAdd.entrySet())
-                html.append("<li>").append(entry.getValue()).append(" ").append(entry.getKey()).append(" $").append(String.format("%.2f", fetchCardPrice(entry.getKey()))).append("</li>");
 
+            List<String> sortedAdd = sortCards(cardsToAdd);
+            for (String card : sortedAdd) {
+                int count = cardsToAdd.get(card);
+                String label = buildDisplayLabel(card, count);
+                String price = String.format("%.2f", fetchCardPrice(card));
+
+                html.append("<li>").append(label).append(" $").append(price).append("</li>");
+            }
             html.append("</ul>");
 
+            // Cards in Common HTML
             html.append("<h3>Cards in Common (").append(totalCommonCount).append(" Total)</h3><ul>");
-            for (var entry : cardsInCommon.entrySet())
-                html.append("<li>").append(entry.getValue()).append(" ").append(entry.getKey()).append("</li>");
-            html.append("</ul>");
+
+            List<String> sortedCommon = sortCards(cardsInCommon);
+            for (String card : sortedCommon) {
+                int count = cardsInCommon.get(card);
+                String label = buildDisplayLabel(card, count);
+                html.append("<li>").append(label).append("</li>");
+            }
+            html.append("</ul>"); 
 
             // Total Cost and Download Links
             html.append("<p><b>Total Upgrade Cost:</b> $")
@@ -145,7 +165,6 @@ public class DeckListDifferServer {
             String fileName = req.params(":filename") + ".txt";
 
             // Path is an interface. Stores ref to a filepath
-            // Paths is a utility class
             Path filePath = Paths.get(fileName);
 
             if (!Files.exists(filePath)) {
@@ -268,24 +287,37 @@ public class DeckListDifferServer {
     }
 
     // Fetch Card Object from scryfall API
+    // with cache for efficiency / prevent rate limits
     private static JSONObject fetchCardJson(String cardName) {
-        try {
-            String query = "https://api.scryfall.com/cards/named?fuzzy=" +cardName.trim().replace(" ", "+");
 
-            @SuppressWarnings("deprecation")
+        // normalize key
+        String key = cardName.toLowerCase();
+
+        // check the cache
+        if (cardJsonCache.containsKey(key)) {
+            return cardJsonCache.get(key);
+        }
+
+        try {
+            String query = "https://api.scryfall.com/cards/named?fuzzy=" + cardName.trim().replace(" ", "+");
+
             HttpURLConnection conn = (HttpURLConnection) new URL(query).openConnection();
             conn.setRequestMethod("GET");
-
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            BufferedReader bufferedReader =
+                new BufferedReader(new InputStreamReader(conn.getInputStream()));
             StringBuilder response = new StringBuilder();
             String line;
-
             while ((line = bufferedReader.readLine()) != null) {
                 response.append(line);
             }
             bufferedReader.close();
 
-            return new JSONObject(response.toString());
+            JSONObject json = new JSONObject(response.toString());
+
+            // store in cache
+            cardJsonCache.put(key, json);
+
+            return json;
         }
         catch (Exception e) {
             System.err.println("Failed to fetch card JSON for " + cardName + ": " + e.getMessage());
@@ -308,25 +340,51 @@ public class DeckListDifferServer {
 
     }
 
-    // TODO
-    // Access fetched json object to extract type line
-    // "artifact", "equipment", etc
-    // Problem: Multiple cards may have multiple type lines
-    private static String fetchTypeLine(String cardName){
+    // Needed for fetchCardTypes
+    private static final Set<String> CARD_TYPES = Set.of(
+    "Artifact", "Creature", "Enchantment", "Instant",
+    "Sorcery", "Land", "Planeswalker", "Battle", "Tribal"
+    );
+
+    // Access fetched json object to extract type line(s)
+    private static List<String> fetchCardTypes(String cardName){
         JSONObject card = fetchCardJson(cardName);
+        List<String> types = new ArrayList<>();
+        String typeLine;
         if (card == null){
-            return "?";
+            return new ArrayList<>();
         }
-        return card.optString("type_line", "?");
+        if (card.has("card_faces")){
+            JSONArray faces = card.optJSONArray("card_faces");
+            if (faces.length() > 0){
+                typeLine = faces.getJSONObject(0).optString("type_line", "");
+            }
+            else{
+                typeLine = card.optString("type_line", "");
+            }
+        }
+        else{
+            typeLine = card.optString("type_line", "");
+        }
+        String[] sections = typeLine.split("—");
+
+        // contains all keywords that a card may contain
+        String leftSide = sections[0].trim();
+        for (String word: leftSide.split("\\s+")){
+            if (CARD_TYPES.contains(word)){
+                types.add(word);
+            }
+        }
+        return types;
     }
 
-    // Access fetched json object to extract colors as an array
-    private static List<String> fetchColors(String cardName){
+    // Access fetched json object to extract color identity as an array
+    private static List<String> fetchColorIdentity(String cardName){
         JSONObject card = fetchCardJson(cardName);
         if (card == null){
             return new ArrayList<>();
         }
-        JSONArray colorsArray = card.optJSONArray("colors");
+        JSONArray colorsArray = card.optJSONArray("color_identity");
         List<String> colors = new ArrayList<>();
         
         if (colorsArray != null){
@@ -338,4 +396,138 @@ public class DeckListDifferServer {
         return colors;
     }
 
+    // Handle type collisions
+    // If a card is an Artifact Creature, it is dominantly a creature
+    // Follows standard priority used by other websites
+    private static final List<String> TYPE_PRIORITY = List.of(
+        "Creature",
+        "Land",
+        "Artifact",
+        "Enchantment",
+        "Planeswalker",
+        "Instant",
+        "Sorcery",
+        "Battle",
+        "Tribal"
+        );
+    
+    // Ordered iteration provides primary type
+    private static String fetchPrimaryType(List<String> types){
+        for (String type: TYPE_PRIORITY){
+            if (types.contains(type)){
+                return type;
+            }
+        }
+        return "Other";
+
     }
+    // Return priority index of a type
+    private static int typeToPriority(String type){
+        int idx = TYPE_PRIORITY.indexOf(type);
+        if (idx >= 0){
+            return idx;
+        }
+        else{
+            return 9999; // if the card's type is not found for some reason, give it lowest possible priority
+        }
+    }
+
+   private static String assignColorCategory(List<String> colorIdentity){
+
+        // Colorless
+        if (colorIdentity == null || colorIdentity.isEmpty()){
+            return "Colorless";
+        }
+
+        // Monocolored
+        if (colorIdentity.size() == 1){
+            switch (colorIdentity.get(0)){
+                case "W": return "White";
+                case "U": return "Blue";
+                case "B": return "Black";
+                case "R": return "Red";
+                case "G": return "Green";
+        }   
+        }      
+
+        // Else is multicolored
+        return String.join("", colorIdentity); // e.g., "RW", "BG", "WUB"
+}
+ 
+    // Sorting logic used by other sites
+    private static int colorSortKey(String colors) {
+        // Single color switching
+        switch (colors) {
+            case "White":     return 0;
+            case "Blue":      return 1;
+            case "Black":     return 2;
+            case "Red":       return 3;
+            case "Green":     return 4;
+        }
+
+        if (colors.equals("Colorless")) {
+            return 9999;
+        }
+
+        // Multicolor
+        // Priority based on size first then alphabet
+        // size 2 colors → group 10
+        // size 3 colors → group 20
+        // size 4 colors → group 30
+        // size 5 colors → group 40
+
+        int len = colors.length();  // number of colors
+        int baseGroup = len * 10;
+
+        // add alphabetical weight
+        return baseGroup + (colors.hashCode() & 0x7fffffff);
+    }
+
+    // Sort by primary type -> color, cards in cardMap by extracting key (cards)
+    private static List<String> sortCards(Map<String, Integer> cardMap){
+        List<String> cards = new ArrayList<>(cardMap.keySet());
+        cards.sort((card1, card2) -> {
+
+            // Determine by Card Primary Type First
+            List<String> card1Types = fetchCardTypes(card1);
+            List<String> card2Types = fetchCardTypes(card2);
+
+            String card1PrimaryType = fetchPrimaryType(card1Types);
+            String card2PrimaryType = fetchPrimaryType(card2Types);
+
+            int typeComparison = Integer.compare(typeToPriority(card1PrimaryType), typeToPriority(card2PrimaryType));
+            if (typeComparison != 0){
+                return typeComparison;
+            }
+
+            // Then look at color categories
+            List<String> card1Colors = fetchColorIdentity(card1);
+            List<String> card2Colors = fetchColorIdentity(card2);
+
+            String card1ColorCategory = assignColorCategory(card1Colors);
+            String card2ColorCategory = assignColorCategory(card2Colors);
+
+            int colorComparison = Integer.compare(colorSortKey(card1ColorCategory), colorSortKey(card2ColorCategory));
+
+            if (colorComparison != 0){
+                return colorComparison;
+            }
+
+            return (card1.compareToIgnoreCase(card2));
+        });
+
+        return cards;
+
+    }
+
+    // For HTML
+    private static String buildDisplayLabel(String cardName, int count) {
+        List<String> types = fetchCardTypes(cardName);
+        String primary = fetchPrimaryType(types);
+
+        List<String> colors = fetchColorIdentity(cardName);
+        String colorCat = assignColorCategory(colors);
+
+        return count + " " + cardName + " (" + primary + ", " + colorCat + ")";
+    }
+}
