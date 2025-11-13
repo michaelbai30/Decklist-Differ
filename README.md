@@ -14,7 +14,7 @@ To use, upload two `.txt` decklists (base and upgraded) in the browser app.
 <br>
 The app will: <br>
 - Parse both decklists line by line <br>
-- Compare card names and quantities <br>
+- Compare card names and quantities with primary type and color category label <br>
 - Fetch live prices from Scryfall <br>
 - Output <br>
   - Cards to add (with current prices) <br>
