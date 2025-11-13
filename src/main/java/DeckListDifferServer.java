@@ -17,37 +17,44 @@ public class DeckListDifferServer {
         staticFiles.location("/public");
 
         // Upload Form HTML
-        get("/", (req, res) -> """
-            <html>
-            <head>
-                <title>Decklist Differ</title>
-                <style>
-                    body { font-family: Arial; margin: 40px; }
-                    input[type=file] { margin: 10px 0; }
-                    button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
-                </style>
-            </head>
-            <body>
-                <h1>Decklist Differ</h1>
-                <form action='/compare' method='post' enctype='multipart/form-data'>
-                    <p><b>Upload Base Decklist:</b></p>
-                    <input type='file' name='baseFile' accept='.txt' required><br>
-                    <p><b>Upload Upgraded Decklist:</b></p>
-                    <input type='file' name='upgradedFile' accept='.txt' required><br>
-                    <button type='submit'>Compare Decks</button>
-                </form>
-            </body>
-            </html>
-        """);
+       get("/", (req, res) -> """
+        <html>
+        <head>
+            <title>Decklist Differ</title>
+            <style>
+                body { font-family: Arial; margin: 40px; }
+                textarea { width: 100%; height: 200px; margin-bottom: 20px; }
+                button { padding: 10px 20px; font-size: 16px; }
+            </style>
+        </head>
+        <body>
+            <h1>Decklist Differ</h1>
+            <form action='/compare' method='post'>
+            <p><b>Base Decklist:</b></p>
+            <textarea name='baseText' placeholder='e.g.:
+1 Swords to Plowshares
+1 Chaos Warp
+1 Lightning Bolt
+...'></textarea>
+
+            <p><b>Upgraded Decklist:</b></p>
+            <textarea name='upgradedText' placeholder='e.g.:
+1 Swords to Plowshares
+1 Chaos Warp
+1 Blasphemous Act
+...'></textarea>
+            <button type='submit'>Compare Decks</button>
+
+            </form>
+        </body>
+        </html>
+    """);
 
         // ---- Handle Uploaded Decks ---
         post("/compare", (req, res) -> {
-            req.attribute("org.eclipse.jetty.multipartConfig", new javax.servlet.MultipartConfigElement("/tmp"));
 
-            // Read uploaded files
-            // read raw request from jetty
-            String baseDeck = readUploadedFile(req.raw().getPart("baseFile")); // from form post request
-            String upgradedDeck = readUploadedFile(req.raw().getPart("upgradedFile"));
+            String baseDeck = req.queryParams("baseText");
+            String upgradedDeck = req.queryParams("upgradedText");
 
             // card name -> card count
             Map<String, Integer> baseMap = parseDeck(baseDeck);
@@ -179,27 +186,6 @@ public class DeckListDifferServer {
     }
 
     // === HELPER METHODS ===
-
-    // 1) Take uploaded filePart
-    // 2) Read contents into big string builder
-    // 3) Return stream as string
-    private static String readUploadedFile(javax.servlet.http.Part filePart) throws IOException {
-    try (InputStream input = filePart.getInputStream();
-         InputStreamReader reader = new InputStreamReader(input);
-         BufferedReader bufferedReader = new BufferedReader(reader)) {
-
-        StringBuilder sb = new StringBuilder();
-        String line;
-
-        // Read file line by line
-        while ((line = bufferedReader.readLine()) != null) {
-            sb.append(line).append("\n");
-        }
-
-        // Return as string
-        return sb.toString();
-        }
-    }
 
     // Parse lines, extracting card count and card name
     // Return map: Card Name -> Card Count
