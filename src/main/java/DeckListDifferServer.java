@@ -531,9 +531,23 @@ public class DeckListDifferServer {
         primaryTypes.sort(Comparator.comparingInt(DeckListDifferServer::typeToPriority));
 
         for (String type : primaryTypes) {
-            html.append("<h3>").append(type).append("</h3><ul>");
-
+            
+            int typeCount = 0;
             Map<String, List<String>> colors = grouped.get(type);
+
+            // Count the number of cards per type (creature, artifact, etc...)
+            for (List<String> cardLabels: colors.values()){
+                for (String label: cardLabels){
+                    int indexOfSpace = label.indexOf(' ');
+                    if (indexOfSpace > 0){
+                        // extract the "4" out of "4 Lightning Bolt" for example
+                        int count = Integer.parseInt(label.substring(0, indexOfSpace));
+                        typeCount += count;
+                    }
+                }
+            }
+
+            html.append("<h3>").append(type).append(" (").append(typeCount).append(")").append("</h3><ul>");
 
             // Sort colors using colorSortKey
             List<String> colorKeys = new ArrayList<>(colors.keySet());
