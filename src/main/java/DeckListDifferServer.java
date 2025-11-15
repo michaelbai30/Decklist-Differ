@@ -24,7 +24,7 @@ public class DeckListDifferServer {
             <style>
                 body { font-family: Arial; margin: 40px; }
                 textarea { width: 100%; height: 200px; margin-bottom: 20px; }
-                button { padding: 10px 20px; font-size: 16px; }
+                button { padding: 10px 20px; font-size: 16px;}
             </style>
         </head>
         <body>
@@ -89,10 +89,6 @@ public class DeckListDifferServer {
                 }
             }
 
-            int totalAddCount = sumCounts(cardsToAdd);
-            int totalRemoveCount = sumCounts(cardsToRemove);
-            int totalCommonCount = sumCounts(cardsInCommon);
-
             double totalUpgradeCost = getTotalUpgradeCost(cardsToAdd);
 
             // Write downloadable files
@@ -119,38 +115,13 @@ public class DeckListDifferServer {
             // Card Name - Card Count
 
             // Cards to Remove HTML
-            html.append("<h3>Cards to Remove (").append(totalRemoveCount).append(" Total)</h3><ul>");
-            List<String> sortedRemove = sortCards(cardsToRemove);
-            for (String card : sortedRemove) {
-                int count = cardsToRemove.get(card);
-                String label = buildDisplayLabel(card, count);
-                html.append("<li>").append(label).append("</li>");
-            }
-            html.append("</ul>");
+            html.append(buildGroupedHtml("Cards to Remove", cardsToRemove, false));
 
             // Cards to Add HTML
-            html.append("<h3>Cards to Add (").append(totalAddCount).append(" Total)</h3><ul>");
-
-            List<String> sortedAdd = sortCards(cardsToAdd);
-            for (String card : sortedAdd) {
-                int count = cardsToAdd.get(card);
-                String label = buildDisplayLabel(card, count);
-                String price = String.format("%.2f", fetchCardPrice(card));
-
-                html.append("<li>").append(label).append(" $").append(price).append("</li>");
-            }
-            html.append("</ul>");
+            html.append(buildGroupedHtml("Cards to Add", cardsToAdd, true));
 
             // Cards in Common HTML
-            html.append("<h3>Cards in Common (").append(totalCommonCount).append(" Total)</h3><ul>");
-
-            List<String> sortedCommon = sortCards(cardsInCommon);
-            for (String card : sortedCommon) {
-                int count = cardsInCommon.get(card);
-                String label = buildDisplayLabel(card, count);
-                html.append("<li>").append(label).append("</li>");
-            }
-            html.append("</ul>"); 
+            html.append(buildGroupedHtml("Cards in Common", cardsInCommon, false));
 
             // Total Cost and Download Links
             html.append("<p><b>Total Upgrade Cost:</b> $")
@@ -418,6 +389,7 @@ public class DeckListDifferServer {
         }
     }
 
+   // ex: ["White", "Blue"] -> "WU"
    private static String assignColorCategory(List<String> colorIdentity){
 
         // Colorless
@@ -437,18 +409,19 @@ public class DeckListDifferServer {
         }      
 
         // Else is multicolored
-        return String.join("", colorIdentity); // e.g., "RW", "BG", "WUB"
+        return String.join("", colorIdentity); // ex: "RW", "BG", "WUB"
 }
  
+    // Given string representing color identity -> sort
     // Sorting logic used by other sites
     private static int colorSortKey(String colors) {
         // Single color switching
         switch (colors) {
-            case "White":     return 0;
-            case "Blue":      return 1;
-            case "Black":     return 2;
-            case "Red":       return 3;
-            case "Green":     return 4;
+            case "White": return 0;
+            case "Blue": return 1;
+            case "Black": return 2;
+            case "Red": return 3;
+            case "Green": return 4;
         }
 
         if (colors.equals("Colorless")) {
@@ -508,12 +481,82 @@ public class DeckListDifferServer {
 
     // For HTML
     private static String buildDisplayLabel(String cardName, int count) {
-        List<String> types = fetchCardTypes(cardName);
-        String primary = fetchPrimaryType(types);
+        return count + " " + cardName;
+    }
 
-        List<String> colors = fetchColorIdentity(cardName);
-        String colorCat = assignColorCategory(colors);
+    // ex: Creature -> White -> ["1 Cloud, Midgar Mercenary"]
+    private static Map<String, Map<String, List<String>>> groupTypeThenColor(Map<String, Integer> cardMap){
+        Map<String, Map<String, List<String>>> res = new LinkedHashMap<>();
 
-        return count + " " + cardName + " (" + primary + ", " + colorCat + ")";
+        for (Map.Entry<String, Integer> entry : cardMap.entrySet()){
+            String card = entry.getKey(); // card name
+            int count = entry.getValue(); // num copies
+
+            List<String> type = fetchCardTypes(card);
+            String primaryType = fetchPrimaryType(type);
+
+            List<String> colors = fetchColorIdentity(card);
+            String colorCategory = assignColorCategory(colors);
+
+
+            // Outer:
+            res.putIfAbsent(primaryType, new LinkedHashMap<>());
+
+            // Inner:
+            res.get(primaryType).putIfAbsent(colorCategory, new ArrayList<>());
+
+            // Build card label
+            String label = buildDisplayLabel(card, count);
+
+            res.get(primaryType).get(colorCategory).add(label);
+        }
+        return res;
+    }
+
+    private static String buildGroupedHtml(String title, Map<String, Integer> cardMap, Boolean isAdd) {
+        StringBuilder html = new StringBuilder();
+
+        html.append("<h2>").append(title).append(" (")
+            .append(sumCounts(cardMap))
+            .append(" Total)</h2>");
+
+        Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap);
+
+        // Sort primary types by priority
+        List<String> primaryTypes = new ArrayList<>(grouped.keySet());
+        primaryTypes.sort(Comparator.comparingInt(DeckListDifferServer::typeToPriority));
+
+        for (String type : primaryTypes) {
+            html.append("<h3>").append(type).append("</h3><ul>");
+
+            Map<String, List<String>> colors = grouped.get(type);
+
+            // Sort colors using colorSortKey
+            List<String> colorKeys = new ArrayList<>(colors.keySet());
+            colorKeys.sort(Comparator.comparingInt(DeckListDifferServer::colorSortKey));
+
+            for (String color : colorKeys) {
+                html.append("<li><b>").append(color).append("</b><ul>");
+
+                List<String> cardLabels = colors.get(color);
+                Collections.sort(cardLabels, String::compareToIgnoreCase);
+
+                for (String label : cardLabels) {
+                    if (isAdd){
+                        Double cardPrice = fetchCardPrice(label);
+                        html.append("<li>").append(label).append(" ($").append(Double.toString(cardPrice) + ")").append("</li>");
+                    }
+                    else{
+                        html.append("<li>").append(label).append("</li>");
+                    }
+                    
+                }
+                html.append("</ul></li>");
+            }
+
+            html.append("</ul>");
+        }
+
+        return html.toString();
     }
 }
