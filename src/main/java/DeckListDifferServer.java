@@ -91,10 +91,14 @@ public class DeckListDifferServer {
 
             double totalUpgradeCost = getTotalUpgradeCost(cardsToAdd);
 
+            Map<String, Integer> sortedAdd = new TreeMap<>(cardsToAdd);
+            Map<String, Integer> sortedRemove = new TreeMap<>(cardsToRemove);
+            Map<String, Integer> sortedInCommon= new TreeMap<>(cardsInCommon);
+
             // Write downloadable files
-            writeToFile("cards_to_add.txt", mapToLines(cardsToAdd));
-            writeToFile("cards_to_remove.txt", mapToLines(cardsToRemove));
-            writeToFile("cards_in_common.txt", mapToLines(cardsInCommon));
+            writeToFile("cards_to_add.txt", mapToLines(sortedAdd));
+            writeToFile("cards_to_remove.txt", mapToLines(sortedRemove));
+            writeToFile("cards_in_common.txt", mapToLines(sortedInCommon));
 
             // Build HTTP Response
             StringBuilder html = new StringBuilder();
@@ -443,7 +447,7 @@ public class DeckListDifferServer {
     }
 
     // Sort by primary type -> color, cards in cardMap by extracting key (cards)
-    private static List<String> sortCards(Map<String, Integer> cardMap){
+    private static List<String> sortCardsByTypeThenColor(Map<String, Integer> cardMap){
         List<String> cards = new ArrayList<>(cardMap.keySet());
         cards.sort((card1, card2) -> {
 
