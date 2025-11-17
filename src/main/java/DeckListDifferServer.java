@@ -97,8 +97,12 @@ public class DeckListDifferServer {
 
             // Write downloadable files
             writeToFile("cards_to_add.txt", mapToLines(sortedAdd));
+            writeDetailedTxtFile("cards_to_add_detailed.txt", cardsToAdd);
             writeToFile("cards_to_remove.txt", mapToLines(sortedRemove));
+            writeDetailedTxtFile("cards_to_removed_detailed.txt", cardsToRemove);
             writeToFile("cards_in_common.txt", mapToLines(sortedInCommon));
+            writeDetailedTxtFile("cards_in_common_detailed.txt", cardsInCommon);
+
 
             // Build HTTP Response
             StringBuilder html = new StringBuilder();
@@ -134,6 +138,9 @@ public class DeckListDifferServer {
                 .append("<a href='/download/cards_to_add'>Download cards_to_add.txt</a><br>") // Generates download link. Clicking it sends get request
                 .append("<a href='/download/cards_to_remove'>Download cards_to_remove.txt</a><br>")
                 .append("<a href='/download/cards_in_common'>Download cards_in_common.txt</a><br><br>")
+                .append("<a href='/download/cards_to_add_detailed'>Download cards_to_add_detailed.txt</a><br>")
+                .append("<a href='/download/cards_to_remove_detailed'>Download cards_to_remove_detailed.txt</a><br>")
+                .append("<a href='/download/cards_in_common_detailed'>Download cards_in_common_detailed.txt</a><br><br>")
                 .append("<a href='/'>Compare Another Deck</a>")
                 .append("</body></html>");
 
@@ -150,6 +157,19 @@ public class DeckListDifferServer {
             Path filePath = Paths.get(fileName);
 
             if (!Files.exists(filePath)) {
+                res.status(404);
+                return "File not found: " + fileName;
+            }
+
+            res.type("text/plain");
+            res.header("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+            return Files.readString(filePath);
+        });
+
+        get("/download/:filename_detailed", (req, res) -> {
+            String fileName = req.params(":filename_detailed") + ".txt";
+            Path filePath = Paths.get(fileName);
+            if (!Files.exists(filePath)){
                 res.status(404);
                 return "File not found: " + fileName;
             }
@@ -576,5 +596,59 @@ public class DeckListDifferServer {
         }
 
         return html.toString();
+    }
+
+    // Write to a txt file card names and quantity categorized by primary type then color cat
+    private static void writeDetailedTxtFile(String fileName, Map<String, Integer> cardMap){
+        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(fileName))) {
+               Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap);
+
+               // Sort primary types by priority
+               List<String> primaryTypes = new ArrayList<>(grouped.keySet());
+               primaryTypes.sort(Comparator.comparingInt(DeckListDifferServer::typeToPriority));
+               
+               for (String type : primaryTypes){
+                    int typeCount = 0;
+                    Map<String, List<String>> colors = grouped.get(type);
+
+                    // count total cards for this primary type
+                    for (List<String> cardLabels : colors.values()) {
+                        for (String label : cardLabels) {
+                            int idx = label.indexOf(' ');
+                            if (idx > 0) {
+                                int count = Integer.parseInt(label.substring(0, idx));
+                                typeCount += count;
+                            }
+                        }
+                    }
+
+                    // Write Type Header
+                    bufferedWriter.write(type + " (" + typeCount + ")");
+                    bufferedWriter.newLine();
+
+                    // Sort Colors
+                    List<String> colorKeys = new ArrayList<>(colors.keySet());
+                    colorKeys.sort(Comparator.comparingInt(DeckListDifferServer::colorSortKey));
+
+                    for (String color : colorKeys){
+                        bufferedWriter.write(color);
+                        bufferedWriter.newLine();
+
+                        List<String> cardLabels = colors.get(color);
+                        Collections.sort(cardLabels, String::compareToIgnoreCase);
+
+                        for (String label : cardLabels) {
+                            bufferedWriter.write(label);
+                            bufferedWriter.newLine();
+                        }          
+                        bufferedWriter.newLine();
+                    }
+                    bufferedWriter.newLine();
+                }
+               
+        }
+        catch (IOException e) {
+            System.err.println("Error writing " + fileName + ": " + e.getMessage());
+        }
     }
 }
