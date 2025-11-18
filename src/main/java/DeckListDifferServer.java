@@ -12,6 +12,9 @@ import spark.utils.IOUtils;
 public class DeckListDifferServer {
     private static final Map<String, JSONObject> cardJsonCache = new HashMap<>();
 
+    // Maps: file name -> file content
+    private static Map<String, String> generatedTxtFiles = new HashMap<>();
+
     public static void main(String[] args) {
         port(4567);
         staticFiles.location("/public");
@@ -95,14 +98,13 @@ public class DeckListDifferServer {
             Map<String, Integer> sortedRemove = new TreeMap<>(cardsToRemove);
             Map<String, Integer> sortedInCommon= new TreeMap<>(cardsInCommon);
 
-            // Write downloadable files
-            writeToFile("cards_to_add.txt", mapToLines(sortedAdd));
-            writeDetailedTxtFile("cards_to_add_detailed.txt", cardsToAdd);
-            writeToFile("cards_to_remove.txt", mapToLines(sortedRemove));
-            writeDetailedTxtFile("cards_to_removed_detailed.txt", cardsToRemove);
-            writeToFile("cards_in_common.txt", mapToLines(sortedInCommon));
-            writeDetailedTxtFile("cards_in_common_detailed.txt", cardsInCommon);
-
+            // Generate downloadable files instead of writing them to disk 
+            generatedTxtFiles.put("cards_to_add.txt", String.join("\n", mapToLines(sortedAdd)));
+            generatedTxtFiles.put("cards_to_remove.txt", String.join("\n", mapToLines(sortedRemove)));
+            generatedTxtFiles.put("cards_in_common.txt", String.join("\n", mapToLines(sortedInCommon)));
+            generatedTxtFiles.put("cards_to_add_detailed.txt", buildDetailedTxtFile(cardsToAdd));
+            generatedTxtFiles.put("cards_to_remove_detailed.txt", buildDetailedTxtFile(cardsToRemove));
+            generatedTxtFiles.put("cards_in_common_detailed.txt", buildDetailedTxtFile(cardsInCommon));
 
             // Build HTTP Response
             StringBuilder html = new StringBuilder();
@@ -153,30 +155,27 @@ public class DeckListDifferServer {
         get("/download/:filename", (req, res) -> {
             String fileName = req.params(":filename") + ".txt";
 
-            // Path is an interface. Stores ref to a filepath
-            Path filePath = Paths.get(fileName);
-
-            if (!Files.exists(filePath)) {
+            if (!generatedTxtFiles.containsKey(fileName)){
                 res.status(404);
-                return "File not found: " + fileName;
+                return "File Not Found";
             }
 
             res.type("text/plain");
             res.header("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
-            return Files.readString(filePath);
+            return generatedTxtFiles.get(fileName);
         });
 
         get("/download/:filename_detailed", (req, res) -> {
             String fileName = req.params(":filename_detailed") + ".txt";
-            Path filePath = Paths.get(fileName);
-            if (!Files.exists(filePath)){
+
+            if (!generatedTxtFiles.containsKey(fileName)){
                 res.status(404);
-                return "File not found: " + fileName;
+                return "File Not Found";
             }
 
             res.type("text/plain");
             res.header("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
-            return Files.readString(filePath);
+            return generatedTxtFiles.get(fileName);
         });
     }
 
@@ -599,56 +598,49 @@ public class DeckListDifferServer {
     }
 
     // Write to a txt file card names and quantity categorized by primary type then color cat
-    private static void writeDetailedTxtFile(String fileName, Map<String, Integer> cardMap){
-        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(fileName))) {
-               Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap);
-
-               // Sort primary types by priority
-               List<String> primaryTypes = new ArrayList<>(grouped.keySet());
-               primaryTypes.sort(Comparator.comparingInt(DeckListDifferServer::typeToPriority));
+    private static String buildDetailedTxtFile(Map<String, Integer> cardMap){
+        StringBuilder sb = new StringBuilder();
+        Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap);
+        
+        // Sort primary types by priority
+        List<String> primaryTypes = new ArrayList<>(grouped.keySet());
+        primaryTypes.sort(Comparator.comparingInt(DeckListDifferServer::typeToPriority));
                
-               for (String type : primaryTypes){
-                    int typeCount = 0;
-                    Map<String, List<String>> colors = grouped.get(type);
+            for (String type : primaryTypes){
+                int typeCount = 0;
+                Map<String, List<String>> colors = grouped.get(type);
 
-                    // count total cards for this primary type
-                    for (List<String> cardLabels : colors.values()) {
-                        for (String label : cardLabels) {
-                            int idx = label.indexOf(' ');
-                            if (idx > 0) {
-                                int count = Integer.parseInt(label.substring(0, idx));
-                                typeCount += count;
-                            }
+                // count total cards for this primary type
+                for (List<String> cardLabels : colors.values()) {
+                    for (String label : cardLabels) {
+                        int idx = label.indexOf(' ');
+                        if (idx > 0) {
+                            int count = Integer.parseInt(label.substring(0, idx));
+                            typeCount += count;
                         }
                     }
+                }
 
-                    // Write Type Header
-                    bufferedWriter.write("# " + type.toUpperCase() + " (" + typeCount + ")");
-                    bufferedWriter.newLine();
+                    // Build String Header
+                    sb.append("# ").append(type.toUpperCase()).append(" (").append(typeCount).append(")\n");
 
                     // Sort Colors
                     List<String> colorKeys = new ArrayList<>(colors.keySet());
                     colorKeys.sort(Comparator.comparingInt(DeckListDifferServer::colorSortKey));
 
                     for (String color : colorKeys){
-                        bufferedWriter.write("# " + color.toUpperCase());
-                        bufferedWriter.newLine();
+                        sb.append("# ").append(color.toUpperCase()).append("\n");
 
                         List<String> cardLabels = colors.get(color);
                         Collections.sort(cardLabels, String::compareToIgnoreCase);
 
                         for (String label : cardLabels) {
-                            bufferedWriter.write(label);
-                            bufferedWriter.newLine();
+                            sb.append(label).append("\n");
                         }          
-                        bufferedWriter.newLine();
+                        sb.append("\n");
                     }
-                    bufferedWriter.newLine();
+                    sb.append("\n");
                 }
-               
-        }
-        catch (IOException e) {
-            System.err.println("Error writing " + fileName + ": " + e.getMessage());
+                return sb.toString();
         }
     }
-}
