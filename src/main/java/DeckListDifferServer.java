@@ -67,6 +67,10 @@ public class DeckListDifferServer {
             Map<String, Integer> cardsToRemove = new LinkedHashMap<>();
             Map<String, Integer> cardsInCommon = new LinkedHashMap<>();
 
+            // get type counts
+            Map<String, Integer> oldTypeCounts = computeTypeCounts(baseMap);
+            Map<String, Integer> newTypeCounts = computeTypeCounts(upgradedMap);
+
             // Compare by Quantities
             Set<String> allCards = new HashSet<>();
             allCards.addAll(baseMap.keySet());
@@ -121,6 +125,36 @@ public class DeckListDifferServer {
                     <h1>Deck Comparison Results</h1>
             """);
 
+            // Total Upgrade Cost
+            html.append("<p><b>Total Upgrade Cost:</b> $").append(String.format("%.2f", totalUpgradeCost)).append("</p><hr>");
+
+            // Changes in Type Count
+            html.append("<h2>Changes in Card Type</h2><ul>");
+            Set<String> allTypes = new TreeSet<>();
+            allTypes.addAll(oldTypeCounts.keySet());
+            allTypes.addAll(newTypeCounts.keySet());
+
+            for (String type : allTypes) {
+                int oldCount = oldTypeCounts.getOrDefault(type, 0);
+                int newCount = newTypeCounts.getOrDefault(type, 0);
+                String sign = ((newCount - oldCount) > 0) ? "+" : "-";
+                String diff = Integer.toString(Math.abs(newCount - oldCount));
+
+                html.append("<li><b>")
+                    .append(type)
+                    .append(":</b> ")
+                    .append(oldCount)
+                    .append(" → ")
+                    .append(newCount)
+                    .append(" (")
+                    .append(sign)
+                    .append(diff)
+                    .append(")")
+                    .append("</li>");
+            }
+
+            html.append("</ul><hr>");
+
             // Build Cards to Remove, Add, in Common HTML
             // Card Name - Card Count
 
@@ -133,10 +167,10 @@ public class DeckListDifferServer {
             // Cards in Common HTML
             html.append(buildGroupedHtml("Cards in Common", cardsInCommon, false));
 
+            
             // Total Cost and Download Links
-            html.append("<p><b>Total Upgrade Cost:</b> $")
-                .append(String.format("%.2f", totalUpgradeCost)).append("</p><hr>")
-                .append("<h3>Download Results</h3>")
+            
+            html.append("<hr><h3>Download Results</h3>")
                 .append("<a href='/download/cards_to_add'>Download cards_to_add.txt</a><br>") // Generates download link. Clicking it sends get request
                 .append("<a href='/download/cards_to_remove'>Download cards_to_remove.txt</a><br>")
                 .append("<a href='/download/cards_in_common'>Download cards_in_common.txt</a><br><br>")
@@ -646,5 +680,22 @@ public class DeckListDifferServer {
                     sb.append("\n");
                 }
                 return sb.toString();
-        }
+    }
+
+    private static Map<String, Integer> computeTypeCounts(Map<String, Integer> cardMap){
+
+            // Ex: Creature -> 25, Land -> 35, etc...
+            Map<String, Integer> typeCounts = new TreeMap<>();
+            for (Map.Entry<String, Integer> entry : cardMap.entrySet()){
+                String card = entry.getKey();
+                int count = entry.getValue();
+
+                List<String> types = fetchCardTypes(card);
+                String primaryType = fetchPrimaryType(types);
+
+                typeCounts.put(primaryType, typeCounts.getOrDefault(primaryType,0) + count);
+            }
+
+            return typeCounts;
+        }    
     }
