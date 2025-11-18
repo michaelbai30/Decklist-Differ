@@ -623,7 +623,7 @@ public class DeckListDifferServer {
                     }
 
                     // Write Type Header
-                    bufferedWriter.write(type + " (" + typeCount + ")");
+                    bufferedWriter.write("# " + type.toUpperCase() + " (" + typeCount + ")");
                     bufferedWriter.newLine();
 
                     // Sort Colors
@@ -631,7 +631,7 @@ public class DeckListDifferServer {
                     colorKeys.sort(Comparator.comparingInt(DeckListDifferServer::colorSortKey));
 
                     for (String color : colorKeys){
-                        bufferedWriter.write(color);
+                        bufferedWriter.write("# " + color.toUpperCase());
                         bufferedWriter.newLine();
 
                         List<String> cardLabels = colors.get(color);
