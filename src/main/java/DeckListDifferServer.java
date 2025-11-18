@@ -197,6 +197,10 @@ public class DeckListDifferServer {
                 continue;
             }
 
+            if (line.startsWith("#")){
+                continue;
+            }
+
             // split on 1+ whitespace only once
             String[] parts = line.split("\\s+", 2);
 
