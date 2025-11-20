@@ -50,11 +50,11 @@ JsonObject (if running without Maven) <br>
 `cd Decklist-Differ`
 
 If you are using raw Java file with no build tools: <br>
-`javac -cp "libs/*" DeckListDifferServer.java` <br>
-`java -cp ".:libs/*" DeckListDifferServer` <br>
+`javac -cp "libs/*" DeckListDiffer.java` <br>
+`java -cp ".:libs/*" DeckListDiffer` <br>
 
 If you are using Maven: <br>
-`mvn compile exec:java -Dexec.mainClass=DeckListDifferServer` <br>
+`mvn compile exec:java -Dexec.mainClass=com.deckdiffer.server.DeckListDiffer` <br>
 
 After that, open in browser by visiting `http://localhost:4567`
 
