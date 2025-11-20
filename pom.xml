@@ -38,7 +38,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>DeckListDifferServer</mainClass>
+                    <mainClass>com.deckdiffer.server.DeckListDiffer</mainClass>
                 </configuration>
             </plugin>
         </plugins>
