@@ -13,7 +13,7 @@
 package com.deckdiffer.stats;
 import java.util.*;
 
-import com.deckdiffer.info.CardInfoService;
+import com.deckdiffer.info.CardDataService;
 
 public class CardStats {
 
@@ -32,8 +32,7 @@ public class CardStats {
             String card = entry.getKey();
             int count = entry.getValue();
 
-            List<String> types = CardInfoService.fetchCardTypes(card);
-            String primaryType = CardInfoService.fetchPrimaryType(types);
+            String primaryType = CardDataService.fetchCardData(card).primaryType;
 
             typeCounts.put(primaryType, typeCounts.getOrDefault(primaryType,0) + count);
         }

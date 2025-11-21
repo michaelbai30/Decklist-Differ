@@ -24,8 +24,9 @@
 package com.deckdiffer.grouping;
 import java.util.*;
 
+import com.deckdiffer.info.CardData;
 import com.deckdiffer.info.CardInfoService;
-import com.deckdiffer.info.PricingService;
+import com.deckdiffer.info.CardDataService;
 import com.deckdiffer.parsing.DeckParser;
 
 public class CardGrouping {
@@ -36,39 +37,34 @@ public class CardGrouping {
     /**
      * @param cardName
      * @param count
-     * @returm simple string label
+     * @return Ex: "1 Counterspell"
      */
     public static String buildDisplayLabel(String cardName, int count) {
         return count + " " + cardName;
     }
 
+    
     /**
-     * @param cardMap; Deck of cards
+     * @param cardMap
      * @return Map of primary type then by color category then cards
-     * ex: Creature -> [White -> ["1 Cloud, Midgar Mercenary"]]
+     * Ex: Creature -> [White -> ["1 Cloud, Midgar Mercenary"]]
      */
     public static Map<String, Map<String, List<String>>> groupTypeThenColor(Map<String, Integer> cardMap){
         Map<String, Map<String, List<String>>> res = new LinkedHashMap<>();
 
         for (Map.Entry<String, Integer> entry : cardMap.entrySet()){
-            String card = entry.getKey(); // card name
-            int count = entry.getValue(); // num copies
+            String card = entry.getKey();
+            int count = entry.getValue();
 
-            List<String> type = CardInfoService.fetchCardTypes(card);
-            String primaryType = CardInfoService.fetchPrimaryType(type);
+            CardData data = CardDataService.fetchCardData(card);
 
-            List<String> colors = CardInfoService.fetchColorIdentity(card);
-            String colorCategory = CardInfoService.assignColorCategory(colors);
+            String primaryType = data.primaryType;
+            String colorCategory = data.colorCategory;
 
-            // Outer:
             res.putIfAbsent(primaryType, new LinkedHashMap<>());
-
-            // Inner:
             res.get(primaryType).putIfAbsent(colorCategory, new ArrayList<>());
 
-            // Build card label
             String label = buildDisplayLabel(card, count);
-
             res.get(primaryType).get(colorCategory).add(label);
         }
         return res;
@@ -76,8 +72,8 @@ public class CardGrouping {
 
     /**
      * @param title: the html section title
-     * @param cardMap: card nams and quantities to display
-     * @param isAdd: whether card price should be included
+     * @param cardMap
+     * @param isAdd: whether card price should be included, typically only on added cards
      * @return block of html representing grouped card data
      */
     public static String buildGroupedHtml(String title, Map<String, Integer> cardMap, Boolean isAdd) {
@@ -103,7 +99,6 @@ public class CardGrouping {
                 for (String label: cardLabels){
                     int indexOfSpace = label.indexOf(' ');
                     if (indexOfSpace > 0){
-                        // extract the "4" out of "4 Lightning Bolt" for example
                         int count = Integer.parseInt(label.substring(0, indexOfSpace));
                         typeCount += count;
                     }
@@ -124,9 +119,13 @@ public class CardGrouping {
 
                 for (String label : cardLabels) {
                     if (isAdd){
-                        String cardName = PricingService.extractCardNameFromLabel(label);
-                        Double cardPrice = PricingService.fetchCardPrice(cardName);
-                        html.append("<li>").append(label).append(" ($").append(Double.toString(cardPrice) + ")").append("</li>");
+                        // extract just card name
+                        String cardName = CardInfoService.extractCardNameFromLabel(label);
+                        
+                        // lookup price in USD
+                        Double price = CardDataService.fetchCardData(cardName).price;
+
+                        html.append("<li>").append(label).append(" ($").append(price).append(")").append("</li>");
                     }
                     else{
                         html.append("<li>").append(label).append("</li>");
@@ -137,7 +136,6 @@ public class CardGrouping {
 
             html.append("</ul>");
         }
-
         return html.toString();
     }
 
@@ -166,13 +164,15 @@ public class CardGrouping {
                     }
                 }
             }
-            // Build String Header
+
+            // String header
             sb.append("# ").append(type.toUpperCase()).append(" (").append(typeCount).append(")\n");
 
-            // Sort Colors
+            // Sort colors
             List<String> colorKeys = new ArrayList<>(colors.keySet());
             colorKeys.sort(Comparator.comparingInt(CardInfoService::colorSortKey));
 
+            // Cards per color category
             for (String color : colorKeys){
                 sb.append("# ").append(color.toUpperCase()).append("\n");
 
