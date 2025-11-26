@@ -43,15 +43,15 @@ public class DeckListDifferServer {
             <body>
                 <h1>Decklist Differ</h1>
                 <form action='/compare' method='post'>
-                <p><b>Base Decklist:</b></p>
-                <textarea name='baseText' placeholder='e.g.:
+                <p><b>Deck 1:</b></p>
+                <textarea name='deck1Text' placeholder='e.g.:
 1 Swords to Plowshares
 1 Chaos Warp
 1 Lightning Bolt
 ...'></textarea>
 
-                <p><b>Upgraded Decklist:</b></p>
-                <textarea name='upgradedText' placeholder='e.g.:
+                <p><b>Deck 2:</b></p>
+                <textarea name='deck2Text' placeholder='e.g.:
 1 Swords to Plowshares
 1 Chaos Warp
 1 Blasphemous Act
@@ -66,68 +66,70 @@ public class DeckListDifferServer {
         // ===== Deck Comparison =====
         post("/compare", (req, res) -> {
 
-            String baseDeck = req.queryParams("baseText");
-            String upgradedDeck = req.queryParams("upgradedText");
+            String deck1Text= req.queryParams("deck1Text");
+            String deck2Text = req.queryParams("deck2Text");
 
-            // Parse decks
-            Map<String, Integer> baseMap = DeckParser.parseDeck(baseDeck);
-            Map<String, Integer> upgradedMap = DeckParser.parseDeck(upgradedDeck);
+            // Parse decks and normalize names
+            Map<String, Integer> deck1Map = DeckParser.parseDeck(deck1Text);
+            Map<String, Integer> deck2Map = DeckParser.parseDeck(deck2Text);
+            deck1Map = DeckParser.normalizeNames(deck1Map);
+            deck2Map = DeckParser.normalizeNames(deck2Map);
 
-            // Compute adds / removes / common cards
-            Map<String, Integer> cardsToAdd = DeckComparer.computeCardsToAdd(baseMap, upgradedMap);
-            Map<String, Integer> cardsToRemove = DeckComparer.computeCardsToRemove(baseMap, upgradedMap);
-            Map<String, Integer> cardsInCommon = DeckComparer.computeCardsInCommon(baseMap, upgradedMap);
+
+            // Compute comparison
+            Map<String, Integer> deck1Only = DeckComparer.computeDeck1Only(deck1Map, deck2Map);   // in 1 not 2
+            Map<String, Integer> deck2Only = DeckComparer.computeDeck2Only(deck1Map, deck2Map);   // in 2 not 1
+            Map<String, Integer> inBoth = DeckComparer.computeCardsInCommon(deck1Map, deck2Map);
 
             // Compute type count changes
-            Map<String, int[]> typeChanges  = DeckComparer.computeTypeChanges(baseMap, upgradedMap);
+            Map<String, int[]> typeChanges  = DeckComparer.computeTypeChanges(deck1Map, deck2Map);
 
-            // Convert typeChanges → old/new count maps
-            Map<String, Integer> oldTypeCounts = new LinkedHashMap<>();
-            Map<String, Integer> newTypeCounts = new LinkedHashMap<>();
+            Map<String, Integer> deck1Types = new LinkedHashMap<>();
+            Map<String, Integer> deck2Types = new LinkedHashMap<>();
 
             for (var e : typeChanges.entrySet()) {
-                oldTypeCounts.put(e.getKey(), e.getValue()[0]);
-                newTypeCounts.put(e.getKey(), e.getValue()[1]);
+                deck1Types.put(e.getKey(), e.getValue()[0]);
+                deck2Types.put(e.getKey(), e.getValue()[1]);
             }
 
-            // Compute total cost of additions
-            double totalUpgradeCost = CardInfoService.getTotalCost(cardsToAdd);
+            // Compute total cost of differing cards
+            // "It costs this much to get the cards only in deck 1 or deck 2"
+            double deck1DiffCost = CardInfoService.getTotalCost(deck1Only);
+            double deck2DiffCost= CardInfoService.getTotalCost(deck2Only);
 
             // Generate all downloadable files using CardGrouping
-            DownloadService.saveFile("cards_to_add.txt",
-                String.join("\n", CardGrouping.buildDetailedTxtFile(cardsToAdd).split("\n")));
+            DownloadService.saveFile("deck1_only.txt",
+            CardGrouping.buildNonDetailedTxtFile(deck1Only));
 
-            DownloadService.saveFile("cards_to_remove.txt",
-                String.join("\n", CardGrouping.buildDetailedTxtFile(cardsToRemove).split("\n")));
+            DownloadService.saveFile("deck2_only.txt",
+            CardGrouping.buildNonDetailedTxtFile(deck2Only));
 
-            DownloadService.saveFile("cards_in_common.txt",
-                String.join("\n", CardGrouping.buildDetailedTxtFile(cardsInCommon).split("\n")));
+            DownloadService.saveFile("common_cards.txt",
+            CardGrouping.buildNonDetailedTxtFile(inBoth));
 
-            // Detailed versions
-            DownloadService.saveFile("cards_to_add_detailed.txt",
-                CardGrouping.buildDetailedTxtFile(cardsToAdd));
+            // Detailed
+            DownloadService.saveFile("deck1_only_detailed.txt",
+            CardGrouping.buildDetailedTxtFile(deck1Only));
 
-            DownloadService.saveFile("cards_to_remove_detailed.txt",
-                CardGrouping.buildDetailedTxtFile(cardsToRemove));
+            DownloadService.saveFile("deck2_only_detailed.txt",
+            CardGrouping.buildDetailedTxtFile(deck2Only));
 
-            DownloadService.saveFile("cards_in_common_detailed.txt",
-                CardGrouping.buildDetailedTxtFile(cardsInCommon));
+            DownloadService.saveFile("common_cards_detailed.txt",
+            CardGrouping.buildDetailedTxtFile(inBoth));
 
             return HtmlBuilder.buildResultsPage(
-                cardsToAdd,
-                cardsToRemove,
-                cardsInCommon,
-                oldTypeCounts,
-                newTypeCounts,
-                totalUpgradeCost
+                deck1Only,
+                deck2Only,
+                inBoth,
+                deck1Types,
+                deck2Types,
+                deck1DiffCost,
+                deck2DiffCost
             );
         });
 
         
         // ===== Download Route =====
-        // Create Download Endpoint and
-        // : indicates dynamic url path, so pass in :filename as a param
-        // Initiates download and deals with get request
         get("/download/:filename", (req, res) -> {
             String fileName = req.params(":filename") + ".txt";
 
