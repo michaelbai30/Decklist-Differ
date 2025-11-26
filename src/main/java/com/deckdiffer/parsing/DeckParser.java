@@ -16,6 +16,9 @@
  * 
  * - void writeToFile(String, List<String>):
  *      Writes a list of text lines to a file on disk
+ * 
+ * - Map<String, Integer> normalizeNames(Map<String, Integer> map):
+ *   Strips off everything after "//" for MDFC cards
  */
 
 package com.deckdiffer.parsing;
@@ -118,4 +121,29 @@ public class DeckParser {
             System.err.println("Error writing " + fileName + ": " + e.getMessage());
         }
     }
+
+    /**
+    * Normalizes card names to a canonical form for comparison.
+    * Strips off everything after "//" for MDFC / face cards
+    * Makes for easier comparisons
+    */
+    public static Map<String, Integer> normalizeNames(Map<String, Integer> map) {
+        Map<String, Integer> res = new LinkedHashMap<>();
+
+        for (var entry : map.entrySet()) {
+            String name = entry.getKey();
+            int count = entry.getValue();
+
+            // Remove alternate faces, e.g.
+            // "A // B" → "A"
+            int idx = name.indexOf("//");
+            if (idx != -1) {
+                name = name.substring(0, idx).trim();
+            }
+
+            res.put(name, count);
+        }
+        return res;
+    }
+
 }
