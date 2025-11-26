@@ -12,11 +12,13 @@ import org.json.JSONObject;
 
 public class CardInfoService {
 
+    // Card Type Definitions
     private static final Set<String> CARD_TYPES = Set.of(
         "Artifact", "Creature", "Enchantment", "Instant",
         "Sorcery", "Land", "Planeswalker", "Battle", "Tribal"
     );
 
+    // Priority ordering for type sorting
     private static final List<String> TYPE_PRIORITY = List.of(
         "Creature",
         "Land",
