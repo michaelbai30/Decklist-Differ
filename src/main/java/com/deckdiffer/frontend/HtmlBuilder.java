@@ -1,10 +1,12 @@
 /**
  * HtmlBuilder.java; Constructs HTML response pages
  *
- * Goal: 
+ * Goal:
  * - Build the comparison result page HTML
  * - Render grouped card sections using grouping methods from CardGrouping
- * - Displaying type count changes and total price
+ * - Display the per-type count comparison between Deck 1 and Deck 2
+ * - Display cost differences for cards unique to each deck
+ * - Provide download links for the new comparison model
  */
 
 package com.deckdiffer.frontend;
@@ -21,21 +23,24 @@ public class HtmlBuilder {
 
     /**
      * HTML for the comparison results page
-     * @param cardsToAdd
-     * @param cardsToRemove
-     * @param cardsInCommon
-     * @param oldTypeCounts
-     * @param newTypeCounts
-     * @param totalUpgradeCost
-     * @return HTML page as a string
+     *
+     * @param deck1Only       Cards unique to Deck 1
+     * @param deck2Only       Cards unique to Deck 2
+     * @param common          Cards shared between Deck 1 + Deck 2
+     * @param deck1TypeCounts Type counts for Deck 1
+     * @param deck2TypeCounts Type counts for Deck 2
+     * @param deck1DiffCost   Total cost of cards only in Deck 1
+     * @param deck2DiffCost   Total cost of cards only in Deck 2
+     * @return HTML page as string
      */
     public static String buildResultsPage(
-            Map<String, Integer> cardsToAdd,
-            Map<String, Integer> cardsToRemove,
-            Map<String, Integer> cardsInCommon,
-            Map<String, Integer> oldTypeCounts,
-            Map<String, Integer> newTypeCounts,
-            double totalUpgradeCost)
+            Map<String, Integer> deck1Only,
+            Map<String, Integer> deck2Only,
+            Map<String, Integer> common,
+            Map<String, Integer> deck1TypeCounts,
+            Map<String, Integer> deck2TypeCounts,
+            double deck1DiffCost,
+            double deck2DiffCost)
     {
         StringBuilder html = new StringBuilder();
 
@@ -46,64 +51,73 @@ public class HtmlBuilder {
                 <style>
                     body { font-family: Arial; margin: 40px; }
                     ul { line-height: 1.5; }
+                    .cost-box { background:#f4f4f4; padding:15px; margin:10px 0; border-radius:6px; }
                 </style>
             </head>
             <body>
                 <h1>Deck Comparison Results</h1>
         """);
 
-        // Total Upgrade Cost
-        html.append("<p><b>Total Upgrade Cost:</b> $")
-            .append(String.format("%.2f", totalUpgradeCost))
-            .append("</p><hr>");
+        // Cost Summary
+        html.append("<div class='cost-box'>")
+            .append("<h2>Cost Difference Summary</h2>")
+            .append("<p><b>Deck 1 Only Value:</b> $")
+            .append(String.format("%.2f", deck1DiffCost))
+            .append("</p>")
 
-        // Type differences
-        html.append("<h2>Changes in Card Type</h2><ul>");
+            .append("<p><b>Deck 2 Only Value:</b> $")
+            .append(String.format("%.2f", deck2DiffCost))
+            .append("</p>")
+            .append("</div><hr>");
+
+        // Type Difference Summary
+        html.append("<h2>Card Type Differences</h2><ul>");
 
         Set<String> allTypes = new TreeSet<>();
-        allTypes.addAll(oldTypeCounts.keySet());
-        allTypes.addAll(newTypeCounts.keySet());
+        allTypes.addAll(deck1TypeCounts.keySet());
+        allTypes.addAll(deck2TypeCounts.keySet());
 
         for (String type : allTypes) {
-            int oldCount = oldTypeCounts.getOrDefault(type, 0);
-            int newCount = newTypeCounts.getOrDefault(type, 0);
+            int count1 = deck1TypeCounts.getOrDefault(type, 0);
+            int count2 = deck2TypeCounts.getOrDefault(type, 0);
 
-            String sign = ((newCount - oldCount) > 0) ? "+" : "-";
-            String diff = Integer.toString(Math.abs(newCount - oldCount));
+            int diff = count2 - count1;
 
             html.append("<li><b>")
                 .append(type)
                 .append(":</b> ")
-                .append(oldCount)
-                .append(" → ")
-                .append(newCount)
+                .append(count1)
+                .append(" vs. ")
+                .append(count2)
                 .append(" (")
-                .append(sign)
-                .append(diff)
+                .append(Math.abs(diff))
                 .append(")</li>");
         }
 
         html.append("</ul><hr>");
 
-        // Cards to Remove
-        html.append(CardGrouping.buildGroupedHtml("Cards to Remove", cardsToRemove, false));
+        // Deck 1 Only
+        html.append(CardGrouping.buildGroupedHtml("In Deck 1, Not in Deck 2", deck1Only));
 
-        // Cards to Add (with price)
-        html.append(CardGrouping.buildGroupedHtml("Cards to Add", cardsToAdd, true));
+        // Deck 2 Only
+        html.append(CardGrouping.buildGroupedHtml("In Deck 2, Not in Deck 1", deck2Only));
 
-        // Cards in Common
-        html.append(CardGrouping.buildGroupedHtml("Cards in Common", cardsInCommon, false));
+        // Common Cards
+        html.append(CardGrouping.buildGroupedHtml("Common in Both Decks", common));
 
-        // Download links
+        // Download Links
         html.append("""
             <hr><h3>Download Results</h3>
-            <a href='/download/cards_to_add'>Download cards_to_add.txt</a><br>
-            <a href='/download/cards_to_remove'>Download cards_to_remove.txt</a><br>
-            <a href='/download/cards_in_common'>Download cards_in_common.txt</a><br><br>
-            <a href='/download/cards_to_add_detailed'>Download cards_to_add_detailed.txt</a><br>
-            <a href='/download/cards_to_remove_detailed'>Download cards_to_remove_detailed.txt</a><br>
-            <a href='/download/cards_in_common_detailed'>Download cards_in_common_detailed.txt</a><br><br>
-            <a href='/'>Compare Another Deck</a>
+
+            <a href='/download/deck1_only'>Download deck1_only.txt</a><br>
+            <a href='/download/deck2_only'>Download deck2_only.txt</a><br>
+            <a href='/download/common_cards'>Download common_cards.txt</a><br><br>
+
+            <a href='/download/deck1_only_detailed'>Download deck1_only_detailed.txt</a><br>
+            <a href='/download/deck2_only_detailed'>Download deck2_only_detailed.txt</a><br>
+            <a href='/download/common_cards_detailed'>Download common_cards_detailed.txt</a><br><br>
+
+            <a href='/'>Compare Another Pair of Decks</a>
         """);
 
         html.append("</body></html>");
