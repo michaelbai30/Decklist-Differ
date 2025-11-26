@@ -3,17 +3,20 @@
  *
  * Provides methods for organizing cards by their primary type and color category,
  * generating HTML sections for UI display, and producing detailed text output
- * for downloadable files. 
- * 
- * Uses CardInfoService to determine type and color data.
+ * for downloadable files.
+ *
+ * Uses CardInfoService + CardDataService to determine type and color data.
  *
  * Methods:
  * - Map<String, Map<String, List<String>>> groupTypeThenColor(Map<String, Integer>):
  *      Groups cards first by PRIMARY TYPE, then by COLOR CATEGORY.
  *
- * - String buildGroupedHtml(String, Map<String, Integer>, Boolean):
- *      Builds fully formatted HTML representing grouped cards,
+ * - String buildGroupedHtml(String, Map<String, Integer>):
+ *      Builds fully formatted HTML representing grouped card data.
  *
+ * - String buildNonDetailedTxtFile(Map<String, Integer>):
+ *      Produces a non detailed text representation of ungrouped cards sorted alphabetically
+ * 
  * - String buildDetailedTxtFile(Map<String, Integer>):
  *      Produces a detailed text representation of cards grouped by type and color.
  *
@@ -22,6 +25,7 @@
  */
 
 package com.deckdiffer.grouping;
+
 import java.util.*;
 
 import com.deckdiffer.info.CardData;
@@ -31,28 +35,37 @@ import com.deckdiffer.parsing.DeckParser;
 
 public class CardGrouping {
 
-    private CardGrouping() {
-    }
+    private CardGrouping() {}
 
     /**
+     * Converts card name and count into a label for display.
+     * Example: "1 Counterspell"
      * @param cardName
      * @param count
-     * @return Ex: "1 Counterspell"
+     * @return label
      */
     public static String buildDisplayLabel(String cardName, int count) {
         return count + " " + cardName;
     }
 
-    
     /**
+     * Groups cards into:
+     * Primary Type → Color Category → List of display labels
+     *
+     * Ex:
+     * Creature → 
+     *    White → ["1 Cloud, Midgar Mercenary"]
+     *    Blue  → ["1 Aether Adept"]
+     *
      * @param cardMap
-     * @return Map of primary type then by color category then cards
-     * Ex: Creature -> [White -> ["1 Cloud, Midgar Mercenary"]]
+     * @return map of primary type then by color category(s) then cards
      */
-    public static Map<String, Map<String, List<String>>> groupTypeThenColor(Map<String, Integer> cardMap){
+    public static Map<String, Map<String, List<String>>> groupTypeThenColor(Map<String, Integer> cardMap) {
+
         Map<String, Map<String, List<String>>> res = new LinkedHashMap<>();
 
-        for (Map.Entry<String, Integer> entry : cardMap.entrySet()){
+        for (Map.Entry<String, Integer> entry : cardMap.entrySet()) {
+
             String card = entry.getKey();
             int count = entry.getValue();
 
@@ -67,16 +80,18 @@ public class CardGrouping {
             String label = buildDisplayLabel(card, count);
             res.get(primaryType).get(colorCategory).add(label);
         }
+
         return res;
     }
 
     /**
+     * Builds a grouped HTML block for the given cards.
+     *
      * @param title: the html section title
      * @param cardMap
-     * @param isAdd: whether card price should be included, typically only on added cards
      * @return block of html representing grouped card data
      */
-    public static String buildGroupedHtml(String title, Map<String, Integer> cardMap, Boolean isAdd) {
+    public static String buildGroupedHtml(String title, Map<String, Integer> cardMap) {
         StringBuilder html = new StringBuilder();
 
         html.append("<h2>").append(title).append(" (")
@@ -90,73 +105,13 @@ public class CardGrouping {
         primaryTypes.sort(Comparator.comparingInt(CardInfoService::typeToPriority));
 
         for (String type : primaryTypes) {
-            
+
             int typeCount = 0;
             Map<String, List<String>> colors = grouped.get(type);
 
-            // Count the number of cards per type (creature, artifact, etc...)
-            for (List<String> cardLabels: colors.values()){
-                for (String label: cardLabels){
-                    int indexOfSpace = label.indexOf(' ');
-                    if (indexOfSpace > 0){
-                        int count = Integer.parseInt(label.substring(0, indexOfSpace));
-                        typeCount += count;
-                    }
-                }
-            }
-
-            html.append("<h3>").append(type).append(" (").append(typeCount).append(")").append("</h3><ul>");
-
-            // Sort colors using colorSortKey
-            List<String> colorKeys = new ArrayList<>(colors.keySet());
-            colorKeys.sort(Comparator.comparingInt(CardInfoService::colorSortKey));
-
-            for (String color : colorKeys) {
-                html.append("<li><b>").append(color).append("</b><ul>");
-
-                List<String> cardLabels = colors.get(color);
-                Collections.sort(cardLabels, String::compareToIgnoreCase);
-
-                for (String label : cardLabels) {
-                    if (isAdd){
-                        // extract just card name
-                        String cardName = CardInfoService.extractCardNameFromLabel(label);
-                        
-                        // lookup price in USD
-                        Double price = CardDataService.fetchCardData(cardName).price;
-
-                        html.append("<li>").append(label).append(" ($").append(price).append(")").append("</li>");
-                    }
-                    else{
-                        html.append("<li>").append(label).append("</li>");
-                    }
-                }
-                html.append("</ul></li>");
-            }
-
-            html.append("</ul>");
-        }
-        return html.toString();
-    }
-
-    /**
-     * @param cardMap: deck
-     * @return string txt representation of cards grouped by type and color
-     */
-    public static String buildDetailedTxtFile(Map<String, Integer> cardMap){
-        StringBuilder sb = new StringBuilder();
-        Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap);
-        
-        // Sort primary types by priority
-        List<String> primaryTypes = new ArrayList<>(grouped.keySet());
-        primaryTypes.sort(Comparator.comparingInt(CardInfoService::typeToPriority));
-               
-        for (String type : primaryTypes){
-            int typeCount = 0;
-            Map<String, List<String>> colors = grouped.get(type);
-            // count total cards for this primary type
-            for (List<String> cardLabels : colors.values()) {
-                for (String label : cardLabels) {
+            // Count total number of cards for this primary type
+            for (List<String> labels : colors.values()) {
+                for (String label : labels) {
                     int idx = label.indexOf(' ');
                     if (idx > 0) {
                         int count = Integer.parseInt(label.substring(0, idx));
@@ -165,15 +120,108 @@ public class CardGrouping {
                 }
             }
 
-            // String header
-            sb.append("# ").append(type.toUpperCase()).append(" (").append(typeCount).append(")\n");
+            html.append("<h3>").append(type).append(" (").append(typeCount).append(")").append("</h3><ul>");
 
-            // Sort colors
+            // Sort color categories using colorSortKey
             List<String> colorKeys = new ArrayList<>(colors.keySet());
             colorKeys.sort(Comparator.comparingInt(CardInfoService::colorSortKey));
 
-            // Cards per color category
-            for (String color : colorKeys){
+            for (String color : colorKeys) {
+                html.append("<li><b>")
+                    .append(color)
+                    .append("</b><ul>");
+
+                List<String> cardLabels = colors.get(color);
+                Collections.sort(cardLabels, String::compareToIgnoreCase);
+
+                for (String label : cardLabels) {
+                    html.append("<li>").append(label).append("</li>");
+                }
+
+                html.append("</ul></li>");
+            }
+
+            html.append("</ul>");
+        }
+
+        return html.toString();
+    }
+
+    /**
+     * Text file format WITHOUT grouping.
+     * Sorted alphabetically.
+     *
+     * @param cardMap: deck
+     * @return string txt representation of cards grouped by type and color
+     */
+    public static String buildNonDetailedTxtFile(Map<String, Integer> cardMap) {
+        StringBuilder sb = new StringBuilder();
+
+        List<String> cards = new ArrayList<>(cardMap.keySet());
+        Collections.sort(cards, String::compareToIgnoreCase);
+
+        for (String card : cards) {
+            if (card.startsWith("#")) {
+                continue;
+            }
+            int count = cardMap.getOrDefault(card, 0);
+            sb.append(count).append(" ").append(card).append("\n");
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Text file output WITH grouping:
+     * For example:
+     *
+     * # CREATURE (12)
+     * # WHITE
+     * 2 Sun Titan
+     * 1 Wall of Omens
+     *
+     * # BLUE
+     * 3 Aether Adept
+     *
+     * @param cardMap
+     * @return grouped txt representation
+     */
+    public static String buildDetailedTxtFile(Map<String, Integer> cardMap) {
+
+        StringBuilder sb = new StringBuilder();
+
+        Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap);
+
+        // Sort primary types
+        List<String> primaryTypes = new ArrayList<>(grouped.keySet());
+        primaryTypes.sort(Comparator.comparingInt(CardInfoService::typeToPriority));
+
+        for (String type : primaryTypes) {
+
+            int typeCount = 0;
+            Map<String, List<String>> colors = grouped.get(type);
+
+            for (List<String> labels : colors.values()) {
+                for (String label : labels) {
+                    int idx = label.indexOf(' ');
+                    if (idx > 0) {
+                        int count = Integer.parseInt(label.substring(0, idx));
+                        typeCount += count;
+                    }
+                }
+            }
+
+            sb.append("# ")
+              .append(type.toUpperCase())
+              .append(" (")
+              .append(typeCount)
+              .append(")\n");
+
+            List<String> colorKeys = new ArrayList<>(colors.keySet());
+            colorKeys.sort(Comparator.comparingInt(CardInfoService::colorSortKey));
+
+            for (String color : colorKeys) {
+
                 sb.append("# ").append(color.toUpperCase()).append("\n");
 
                 List<String> cardLabels = colors.get(color);
@@ -181,11 +229,14 @@ public class CardGrouping {
 
                 for (String label : cardLabels) {
                     sb.append(label).append("\n");
-                }          
+                }
+
                 sb.append("\n");
             }
+
             sb.append("\n");
         }
+
         return sb.toString();
     }
 }
