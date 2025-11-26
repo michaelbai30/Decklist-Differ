@@ -1,26 +1,25 @@
 # DeckList Differ for Magic: the Gathering, MTG
 
-A lightweight web-based utility to compare a base Magic: The Gathering (MTG) decklist with a prospective upgraded decklist,
-highlighing cards that were added, removed, or kept, along with **real-time card prices** fetched from Scryfall API.
+A lightweight web-based utility to compare two decks in Magic: The Gathering (MTG),
+highting cards that are present only in deck1, deck2, or are in common.
+Features **real-time card prices** fetched from Scryfall API as well as categorized and sorted data.
 <br>
-
-**Quickly find what's new and what it'll cost you!** <br>
 
 ## Purpose and Usage
 
-DeckList Differ helps MTG players quickly see **what changes** exist between two decklists and **how much upgrading will cost**.
+DeckList Differ helps MTG players quickly see **what differences** exist between two decklists and **how much difference in money the decklists are**.
 
-To use, upload two `.txt` decklists (base and upgraded) in the browser app.
+To use, upload two `.txt` decklists (deck1 and deck2) in the browser app.
 <br>
 The app will: <br>
 - Parse both decklists line by line <br>
 - Compare card names and quantities with primary type and color category label <br>
 - Fetch live prices from Scryfall <br>
 - Output <br>
-  - Cards to add (with current prices) <br>
-  - Cards to remove <br>
+  - Cards in deck 1 only <br>
+  - Cards in deck2 only <br>
   - Cards in common <br>
-  - Total upgrade cost <br>
+  - Cost of the cards in deck 1/2 only <br>
 - Generate **downloadable text files** for each list
 
 **NOTE: Please ensure that decklists are formatted in the standard plaintext format for MTG. <br>
