@@ -1,10 +1,10 @@
 /**
  * DeckComparer.java; Performs comparison logic between two decklists.
  *
- * Determines
- * - which cards were added
- * - which cards are to be cut
- * - which cards remain in common
+ * Determines:
+ * - cards unique to Deck 1
+ * - cards unique to Deck 2
+ * - cards shared in common between both decks
  * - type count differences between the two decks
  */
 
@@ -18,103 +18,95 @@ public class DeckComparer {
     private DeckComparer() {}
 
     /**
-     * @param: Map<String, Integer> representing base card deck
-     * @param: Map<String, Integer> representing upgraded card deck
-     * @return: map of cards that appear more times in upgraded deck.
+     * @param deck1 Map<String, Integer> 
+     * @param deck2 Map<String, Integer>
+     * @return cards that appear exclusively in Deck 1 with their counts
      */
-    public static Map<String, Integer> computeCardsToAdd(Map<String, Integer> baseMap, Map<String, Integer> upgradedMap) {
+    public static Map<String, Integer> computeDeck1Only(Map<String, Integer> deck1, Map<String, Integer> deck2) {
 
         Map<String, Integer> result = new LinkedHashMap<>();
 
-        Set<String> allCards = new HashSet<>();
-        allCards.addAll(baseMap.keySet());
-        allCards.addAll(upgradedMap.keySet());
+        for (String card: deck1.keySet()){
+            int count1 = deck1.getOrDefault(card, 0);
+            int count2 = deck2.getOrDefault(card, 0);
 
-        for (String card : allCards) {
-            int baseCount = baseMap.getOrDefault(card, 0);
-            int newCount = upgradedMap.getOrDefault(card, 0);
-
-            if (newCount > baseCount) {
-                result.put(card, newCount - baseCount);
+            if (count1 > count2){
+                result.put(card, count1 - count2);
             }
         }
-
         return result;
     }
 
     /**
-     * @param: Map<String, Integer> representing base card deck
-     * @param: Map<String, Integer> representing upgraded card deck
-     * @return: map of cards that appear more times in the base deck
-     */ 
-    public static Map<String, Integer> computeCardsToRemove(Map<String, Integer> baseMap, Map<String, Integer> upgradedMap) {
+     * @param deck1 Map<String, Integer>
+     * @param deck2 Map<String, Integer>
+     * @return cards that appear exclusively in Deck 2 with their counts
+     */
+    public static Map<String, Integer> computeDeck2Only(Map<String, Integer> deck1, Map<String, Integer> deck2) {
 
         Map<String, Integer> result = new LinkedHashMap<>();
 
-        Set<String> allCards = new HashSet<>();
-        allCards.addAll(baseMap.keySet());
-        allCards.addAll(upgradedMap.keySet());
+        for (String card: deck2.keySet()){
+            int count1 = deck1.getOrDefault(card, 0);
+            int count2 = deck2.getOrDefault(card, 0);
 
-        for (String card : allCards) {
-            int baseCount = baseMap.getOrDefault(card, 0);
-            int newCount = upgradedMap.getOrDefault(card, 0);
-
-            if (baseCount > newCount) {
-                result.put(card, baseCount - newCount);
+            if (count2 > count1){
+                result.put(card, count2 - count1);
             }
         }
-
         return result;
-    }
+    } 
 
     /**
-     * @param: Map<String, Integer> representing base card deck
-     * @param: Map<String, Integer> representing upgraded card deck 
-     * Returns cards that appear in both decks (minimum count).
+     * @param deck1 Map<String, Integer> representing Deck 1
+     * @param deck2 Map<String, Integer> representing Deck 2
+     * @return cards that appear in BOTH decks (minimum count)
      */
-    public static Map<String, Integer> computeCardsInCommon(Map<String, Integer> baseMap, Map<String, Integer> upgradedMap) {
+    public static Map<String, Integer> computeCardsInCommon(Map<String, Integer> deck1, Map<String, Integer> deck2) {
 
         Map<String, Integer> result = new LinkedHashMap<>();
 
         Set<String> allCards = new HashSet<>();
-        allCards.addAll(baseMap.keySet());
-        allCards.addAll(upgradedMap.keySet());
+        allCards.addAll(deck1.keySet());
+        allCards.addAll(deck2.keySet());
 
         for (String card : allCards) {
-            int baseCount = baseMap.getOrDefault(card, 0);
-            int newCount = upgradedMap.getOrDefault(card, 0);
+            int count1 = deck1.getOrDefault(card, 0);
+            int count2 = deck2.getOrDefault(card, 0);
 
-            int common = Math.min(baseCount, newCount);
+            int common = Math.min(count1, count2);
             if (common > 0) {
                 result.put(card, common);
             }
         }
-
         return result;
     }
 
     /**
-     * @param: Map<String, Integer> representing base card deck
-     * @param: Map<String, Integer> representing upgraded card deck 
-     * @return: Returns a map describing how type counts changed between base and upgraded.
+     * @param deck1 Map<String, Integer>
+     * @param deck2 Map<String, Integer>
+     * @return Map <String, int[]>: Returns a map describing how type counts changed between base and upgraded.
+     * where
+     * value[0] = count in Deck 1
+     * value[1] = count in Deck 2
      * Ex: Creature -> {20, 25} // The amount of creatures in the deck increased from 20 cards to 25 cards
      */
-    public static Map<String, int[]> computeTypeChanges(Map<String, Integer> baseMap, Map<String, Integer> upgradedMap) {
+    public static Map<String, int[]> computeTypeChanges(Map<String, Integer> deck1, Map<String, Integer> deck2) {
 
-        Map<String, Integer> oldTypes = CardStats.computeTypeCounts(baseMap);
-        Map<String, Integer> newTypes = CardStats.computeTypeCounts(upgradedMap);
+        Map<String, Integer> d1Types = CardStats.computeTypeCounts(deck1);
+        Map<String, Integer> d2Types = CardStats.computeTypeCounts(deck2);
 
         Map<String, int[]> result = new LinkedHashMap<>();
 
         Set<String> allTypes = new TreeSet<>();
-        allTypes.addAll(oldTypes.keySet());
-        allTypes.addAll(newTypes.keySet());
+        allTypes.addAll(d1Types.keySet());
+        allTypes.addAll(d2Types.keySet());
 
         for (String type : allTypes) {
-            int oldCount = oldTypes.getOrDefault(type, 0);
-            int newCount = newTypes.getOrDefault(type, 0);
+            int count1 = d1Types.getOrDefault(type, 0);
+            int count2 = d2Types.getOrDefault(type, 0);
 
-            result.put(type, new int[]{oldCount, newCount});
+            result.put(type, new int[]{count1, count2});
         }
 
         return result;
