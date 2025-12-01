@@ -86,19 +86,11 @@ public class CardGrouping {
     /**
      * Builds a grouped HTML block for the given cards.
      *
-     * @param title: the html section title
      * @param cardMap
      * @return block of html representing grouped card data
      */
-    public static String buildGroupedHtml(String title, Map<String, Integer> cardMap) {
+    public static String buildGroupedHtml(Map<String, Integer> cardMap) {
         StringBuilder html = new StringBuilder();
-
-        // Section header with total count
-        html.append("<h2>")
-            .append(title)
-            .append(" (")
-            .append(DeckParser.sumCounts(cardMap))
-            .append(" Total)</h2>");
 
         // Group cards: primary type -> color -> labels
         Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap);
