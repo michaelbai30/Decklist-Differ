@@ -21,18 +21,18 @@ public class HtmlBuilder {
 
     private HtmlBuilder() {}
 
-    /**
-     * HTML for the comparison results page
-     *
-     * @param deck1Only       Cards unique to Deck 1
-     * @param deck2Only       Cards unique to Deck 2
-     * @param common          Cards shared between Deck 1 + Deck 2
-     * @param deck1TypeCounts Type counts for Deck 1
-     * @param deck2TypeCounts Type counts for Deck 2
-     * @param deck1DiffCost   Total cost of cards only in Deck 1
-     * @param deck2DiffCost   Total cost of cards only in Deck 2
-     * @return HTML page as string
-     */
+      /**
+      * HTML for the comparison results page
+      *
+      * @param deck1Only       Cards unique to Deck 1
+      * @param deck2Only       Cards unique to Deck 2
+      * @param common          Cards shared between Deck 1 + Deck 2
+      * @param deck1TypeCounts Type counts for Deck 1
+      * @param deck2TypeCounts Type counts for Deck 2
+      * @param deck1DiffCost   Total cost of cards only in Deck 1
+      * @param deck2DiffCost   Total cost of cards only in Deck 2
+      * @return HTML page as string
+      */
     public static String buildResultsPage(
             Map<String, Integer> deck1Only,
             Map<String, Integer> deck2Only,
@@ -109,12 +109,42 @@ public class HtmlBuilder {
                     .card-link {
                         text-decoration: none;
                     }
+
+                    /* Collapsible section controls */
+                    .section-header {
+                        cursor: pointer;
+                        font-weight: bold;
+                        margin: 20px 0 10px;
+                        padding: 10px;
+                        background: #eaeaea;
+                        border-radius: 6px;
+                    }
+
+                    .section-content {
+                        display: none;
+                        margin-left: 10px;
+                    }
+
+                    .section-header:hover {
+                        background: #dcdcdc;
+                    }
+
+                    .arrow {
+                        font-size: 14px;
+                        color: #555;
+                        margin-right: 8px;
+                        transition: transform 0.2s ease;
+                    }
+
+                    .arrow.open {
+                        transform: rotate(90deg);
+                    }
+
                 </style>
             </head>
             <body>
                 <h1>Deck Comparison Results</h1>
         """);
-
 
         // Cost Summary
         html.append("<div class='cost-box'>")
@@ -137,7 +167,6 @@ public class HtmlBuilder {
         for (String type : allTypes) {
             int count1 = deck1TypeCounts.getOrDefault(type, 0);
             int count2 = deck2TypeCounts.getOrDefault(type, 0);
-
             int diff = count2 - count1;
 
             html.append("<li><b>")
@@ -154,15 +183,34 @@ public class HtmlBuilder {
         html.append("</ul><hr>");
 
         // Deck 1 Only
+        html.append("""
+            <div class='section-header' onclick="toggleSection('sec1', this)">
+                <span class="arrow">▶</span> In Deck 1, Not in Deck 2
+            </div>
+            <div class='section-content' id='sec1'>
+        """);
         html.append(CardGrouping.buildGroupedHtml("In Deck 1, Not in Deck 2", deck1Only));
-        html.append("<hr>");
-        
+        html.append("</div><hr>");
+
         // Deck 2 Only
+        html.append("""
+            <div class='section-header' onclick="toggleSection('sec2', this)">
+                <span class="arrow">▶</span> In Deck 2, Not in Deck 1
+            </div>
+            <div class='section-content' id='sec2'>
+        """);
         html.append(CardGrouping.buildGroupedHtml("In Deck 2, Not in Deck 1", deck2Only));
-        html.append("<hr>");
+        html.append("</div><hr>");
 
         // Common Cards
+        html.append("""
+            <div class='section-header' onclick="toggleSection('sec3', this)">
+                <span class="arrow">▶</span> Common in Both Decks
+            </div>
+            <div class='section-content' id='sec3'>
+        """);
         html.append(CardGrouping.buildGroupedHtml("Common in Both Decks", common));
+        html.append("</div>");
 
         // Download Links
         html.append("""
@@ -177,6 +225,27 @@ public class HtmlBuilder {
             <a href='/download/common_cards_detailed'>Download common_cards_detailed.txt</a><br><br>
 
             <a href='/'>Compare Another Pair of Decks</a>
+        """);
+
+        // Collapsible toggle
+        html.append("""
+            <script>
+                function toggleSection(id, headerEl) {
+                    const e = document.getElementById(id);
+                    if (!e) return;
+
+                    const arrow = headerEl.querySelector('.arrow');
+
+                    if (e.style.display === "none" || e.style.display === "") {
+                        e.style.display = "block";
+                        if (arrow) arrow.classList.add('open');
+                    }
+                    else {
+                        e.style.display = "none";
+                        if (arrow) arrow.classList.remove('open');
+                    }
+                }
+            </script>
         """);
 
         html.append("</body></html>");
