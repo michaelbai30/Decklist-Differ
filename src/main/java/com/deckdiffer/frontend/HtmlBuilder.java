@@ -44,19 +44,61 @@ public class HtmlBuilder {
     {
         StringBuilder html = new StringBuilder();
 
-        html.append("""
+       html.append("""
             <html>
             <head>
                 <title>Deck Comparison Result</title>
                 <style>
-                    body { font-family: Arial; margin: 40px; }
+                    body { font-family: Arial, sans-serif; margin: 40px; }
                     ul { line-height: 1.5; }
-                    .cost-box { background:#f4f4f4; padding:15px; margin:10px 0; border-radius:6px; }
+                    .cost-box {
+                        background:#f4f4f4;
+                        padding:15px;
+                        margin:10px 0 20px 0;
+                        border-radius:6px;
+                    }
+
+                    /* Grid-based card display */
+                    .card-grid {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 12px;
+                        margin: 8px 0 24px;
+                    }
+
+                    .card-tile {
+                        position: relative;
+                        width: 180px;
+                    }
+
+                    .card-tile img {
+                        width: 100%;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                        display: block;
+                    }
+
+                    .card-count-badge {
+                        position: absolute;
+                        top: 6px;
+                        right: 6px;
+                        background: rgba(0,0,0,0.75);
+                        color: #fff;
+                        padding: 2px 6px;
+                        border-radius: 999px;
+                        font-size: 12px;
+                        font-weight: bold;
+                    }
+
+                    .card-color-header {
+                        margin: 4px 0;
+                        font-weight: bold;
+                    }
                 </style>
             </head>
             <body>
                 <h1>Deck Comparison Results</h1>
-        """);
+            """);
 
         // Cost Summary
         html.append("<div class='cost-box'>")
@@ -64,7 +106,6 @@ public class HtmlBuilder {
             .append("<p><b>Deck 1 Only Value:</b> $")
             .append(String.format("%.2f", deck1DiffCost))
             .append("</p>")
-
             .append("<p><b>Deck 2 Only Value:</b> $")
             .append(String.format("%.2f", deck2DiffCost))
             .append("</p>")
