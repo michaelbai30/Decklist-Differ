@@ -11,13 +11,15 @@ public class CardData {
     public List<String> colors;
     public String colorCategory;
     public double price;
+    public String imageUrl;
 
-    public CardData(JSONObject json, List<String> types, String primaryType, List<String> colors, String colorCategory, double price){
+    public CardData(JSONObject json, List<String> types, String primaryType, List<String> colors, String colorCategory, double price, String imageUrl){
         this.json = json;
         this.types = types;
         this.primaryType = primaryType;
         this.colors = colors;
         this.colorCategory = colorCategory;
         this.price = price;
+        this.imageUrl = imageUrl;
     }
 }
