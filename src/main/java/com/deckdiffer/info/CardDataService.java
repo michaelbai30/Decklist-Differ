@@ -88,6 +88,7 @@ public class CardDataService {
                 List.of(),
                 "Colorless",
                 0.0,
+                null,
                 null
             );
         }
@@ -115,8 +116,9 @@ public class CardDataService {
         double price = CardInfoService.extractPriceFromJson(json);
 
         String imageUrl = extractImageUrl(json);
+        String scryfallUrl = json.optString("scryfall_uri", null);
 
-        return new CardData(json, types, primaryType, colors, colorCategory, price, imageUrl);
+        return new CardData(json, types, primaryType, colors, colorCategory, price, imageUrl, scryfallUrl);
     }
 
 
