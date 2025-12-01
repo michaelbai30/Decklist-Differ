@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import com.deckdiffer.grouping.CardGrouping;
+import com.deckdiffer.parsing.DeckParser;
 
 public class HtmlBuilder {
 
@@ -179,31 +180,38 @@ public class HtmlBuilder {
         // Deck 1 Only
         html.append("""
             <div class='section-header' onclick="toggleSection('sec1', this)">
-                <span class="arrow">▶</span> In Deck 1, Not in Deck 2
+            <span class="arrow">▶</span> In Deck 1, Not in Deck 2 (""")
+            .append(DeckParser.sumCounts(deck1Only)).append(")")
+            .append("""
             </div>
             <div class='section-content' id='sec1'>
         """);
-        html.append(CardGrouping.buildGroupedHtml("In Deck 1, Not in Deck 2", deck1Only));
+
+        html.append(CardGrouping.buildGroupedHtml(deck1Only));
         html.append("</div><hr>");
 
         // Deck 2 Only
-        html.append("""
+         html.append("""
             <div class='section-header' onclick="toggleSection('sec2', this)">
-                <span class="arrow">▶</span> In Deck 2, Not in Deck 1
+            <span class="arrow">▶</span> In Deck 2, Not in Deck 1 (""")
+            .append(DeckParser.sumCounts(deck2Only)).append(")")
+            .append("""
             </div>
             <div class='section-content' id='sec2'>
         """);
-        html.append(CardGrouping.buildGroupedHtml("In Deck 2, Not in Deck 1", deck2Only));
+        html.append(CardGrouping.buildGroupedHtml(deck2Only));
         html.append("</div><hr>");
 
         // Common Cards
-        html.append("""
+         html.append("""
             <div class='section-header' onclick="toggleSection('sec3', this)">
-                <span class="arrow">▶</span> Common in Both Decks
+            <span class="arrow">▶</span> Common in Both Decks (""")
+            .append(DeckParser.sumCounts(common)).append(")")
+            .append("""
             </div>
             <div class='section-content' id='sec3'>
         """);
-        html.append(CardGrouping.buildGroupedHtml("Common in Both Decks", common));
+        html.append(CardGrouping.buildGroupedHtml(common));
         html.append("</div>");
 
         // Download Links
