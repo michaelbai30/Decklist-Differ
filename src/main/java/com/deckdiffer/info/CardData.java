@@ -12,8 +12,9 @@ public class CardData {
     public String colorCategory;
     public double price;
     public String imageUrl;
+    public String scryfallUrl;
 
-    public CardData(JSONObject json, List<String> types, String primaryType, List<String> colors, String colorCategory, double price, String imageUrl){
+    public CardData(JSONObject json, List<String> types, String primaryType, List<String> colors, String colorCategory, double price, String imageUrl, String scryfallUrl){
         this.json = json;
         this.types = types;
         this.primaryType = primaryType;
@@ -21,5 +22,6 @@ public class CardData {
         this.colorCategory = colorCategory;
         this.price = price;
         this.imageUrl = imageUrl;
+        this.scryfallUrl = scryfallUrl;
     }
 }
