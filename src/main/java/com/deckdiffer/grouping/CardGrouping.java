@@ -70,7 +70,6 @@ public class CardGrouping {
             int count = entry.getValue();
 
             CardData data = CardDataService.fetchCardData(card);
-
             String primaryType = data.primaryType;
             String colorCategory = data.colorCategory;
 
@@ -156,9 +155,12 @@ public class CardGrouping {
                         cardName = label.substring(idx + 1).trim();
                     }
 
-                    html.append("<div class='card-tile'>");
-
                     CardData data = CardDataService.fetchCardData(cardName);
+
+                    html.append("<a class='card-link' href='")
+                        .append(data.scryfallUrl)
+                        .append("' target='_blank'>")
+                        .append("<div class='card-tile'>");
                     String imgUrl = data.imageUrl;
 
                     if (imgUrl != null) {
@@ -181,7 +183,7 @@ public class CardGrouping {
                             .append("</div>");
                     }
 
-                    html.append("</div>"); // .card-tile
+                    html.append("</div></a>"); // .card-tile
                 }
 
                 html.append("</div>"); // .card-grid
