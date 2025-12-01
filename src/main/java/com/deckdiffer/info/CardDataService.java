@@ -31,7 +31,6 @@ public class CardDataService {
      * @return JSONObject representing Scryfall card data
      */
     static JSONObject fetchCardJson(String cardName) {
-
         String key = cardName.toLowerCase();
 
         if (cardJsonCache.containsKey(key)) {
@@ -60,7 +59,7 @@ public class CardDataService {
             return json;
         }
         catch (Exception e) {
-            cardJsonCache.put(key, null);   // IMPORTANT FIX
+            cardJsonCache.put(key, null);
             System.err.println("Failed to fetch card JSON for " + cardName + ": " + e.getMessage());
             return null;
         }
@@ -71,7 +70,6 @@ public class CardDataService {
      * @return CardData object extracted from fetchCardJson
      */
     public static CardData fetchCardData(String cardName) {
-
         String key = cardName.toLowerCase();
 
         if (cardDataCache.containsKey(key)) {
@@ -89,7 +87,8 @@ public class CardDataService {
                 "Other",
                 List.of(),
                 "Colorless",
-                0.0
+                0.0,
+                null
             );
         }
         else {
@@ -115,6 +114,27 @@ public class CardDataService {
 
         double price = CardInfoService.extractPriceFromJson(json);
 
-        return new CardData(json, types, primaryType, colors, colorCategory, price);
+        String imageUrl = extractImageUrl(json);
+
+        return new CardData(json, types, primaryType, colors, colorCategory, price, imageUrl);
+    }
+
+
+    private static String extractImageUrl(JSONObject json) {
+        if (json == null) return null;
+
+        // Single faced cards
+        JSONObject img = json.optJSONObject("image_uris");
+        if (img != null) return img.optString("normal", null);
+
+        // MDFC cards
+        var faces = json.optJSONArray("card_faces");
+        if (faces != null && faces.length() > 0) {
+            JSONObject face = faces.getJSONObject(0);
+            JSONObject faceImg = face.optJSONObject("image_uris");
+            if (faceImg != null) return faceImg.optString("normal", null);
+        }
+
+        return null;
     }
 }
