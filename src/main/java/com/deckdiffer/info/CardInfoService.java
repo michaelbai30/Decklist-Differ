@@ -139,7 +139,9 @@ public class CardInfoService {
         }   
         }
 
+
         // Else is multicolored
+        colorIdentity.sort(Comparator.comparingInt(c -> "WUBRG".indexOf(c))); // sort based on WUBRG
         return String.join("", colorIdentity); // ex: "WU", "UB", "WUB"
     }
 
