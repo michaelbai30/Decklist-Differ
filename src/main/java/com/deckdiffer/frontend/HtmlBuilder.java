@@ -44,7 +44,7 @@ public class HtmlBuilder {
     {
         StringBuilder html = new StringBuilder();
 
-       html.append("""
+        html.append("""
             <html>
             <head>
                 <title>Deck Comparison Result</title>
@@ -69,6 +69,7 @@ public class HtmlBuilder {
                     .card-tile {
                         position: relative;
                         width: 180px;
+                        transition: transform 0.15s ease, box-shadow 0.2s ease;
                     }
 
                     .card-tile img {
@@ -76,6 +77,16 @@ public class HtmlBuilder {
                         border-radius: 8px;
                         box-shadow: 0 4px 10px rgba(0,0,0,0.3);
                         display: block;
+                        transition: transform 0.15s ease;
+                    }
+
+                    .card-tile:hover {
+                        transform: scale(1.05);
+                        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+                    }
+
+                    .card-tile:hover img {
+                        transform: scale(1.10);
                     }
 
                     .card-count-badge {
@@ -94,11 +105,16 @@ public class HtmlBuilder {
                         margin: 4px 0;
                         font-weight: bold;
                     }
+
+                    .card-link {
+                        text-decoration: none;
+                    }
                 </style>
             </head>
             <body>
                 <h1>Deck Comparison Results</h1>
-            """);
+        """);
+
 
         // Cost Summary
         html.append("<div class='cost-box'>")
@@ -139,9 +155,11 @@ public class HtmlBuilder {
 
         // Deck 1 Only
         html.append(CardGrouping.buildGroupedHtml("In Deck 1, Not in Deck 2", deck1Only));
-
+        html.append("<hr>");
+        
         // Deck 2 Only
         html.append(CardGrouping.buildGroupedHtml("In Deck 2, Not in Deck 1", deck2Only));
+        html.append("<hr>");
 
         // Common Cards
         html.append(CardGrouping.buildGroupedHtml("Common in Both Decks", common));
