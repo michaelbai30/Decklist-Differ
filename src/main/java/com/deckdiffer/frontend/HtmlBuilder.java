@@ -133,13 +133,7 @@ public class HtmlBuilder {
                         font-size: 14px;
                         color: #555;
                         margin-right: 8px;
-                        transition: transform 0.2s ease;
                     }
-
-                    .arrow.open {
-                        transform: rotate(90deg);
-                    }
-
                 </style>
             </head>
             <body>
@@ -236,13 +230,19 @@ public class HtmlBuilder {
 
                     const arrow = headerEl.querySelector('.arrow');
 
-                    if (e.style.display === "none" || e.style.display === "") {
+                    const isClosed = (e.style.display ==="none" || e.style.display === "");
+
+                    if (isClosed){
                         e.style.display = "block";
-                        if (arrow) arrow.classList.add('open');
+                        if (arrow){
+                            arrow.textContent = "▼";
+                        }
                     }
-                    else {
+                    else{
                         e.style.display = "none";
-                        if (arrow) arrow.classList.remove('open');
+                        if (arrow){
+                            arrow.textContent = "▶";
+                        }
                     }
                 }
             </script>
