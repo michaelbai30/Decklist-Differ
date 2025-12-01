@@ -94,10 +94,14 @@ public class CardGrouping {
     public static String buildGroupedHtml(String title, Map<String, Integer> cardMap) {
         StringBuilder html = new StringBuilder();
 
-        html.append("<h2>").append(title).append(" (")
+        // Section header with total count
+        html.append("<h2>")
+            .append(title)
+            .append(" (")
             .append(DeckParser.sumCounts(cardMap))
             .append(" Total)</h2>");
 
+        // Group cards: primary type -> color -> labels
         Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap);
 
         // Sort primary types by priority
@@ -120,34 +124,73 @@ public class CardGrouping {
                 }
             }
 
-            html.append("<h3>").append(type).append(" (").append(typeCount).append(")").append("</h3><ul>");
+            // Type header (Creature, Land, Artifact, ...)
+            html.append("<h3>").append(type).append(" (")
+                .append(typeCount).append(")</h3>");
 
             // Sort color categories using colorSortKey
             List<String> colorKeys = new ArrayList<>(colors.keySet());
             colorKeys.sort(Comparator.comparingInt(CardInfoService::colorSortKey));
 
             for (String color : colorKeys) {
-                html.append("<li><b>")
+
+                // Color header (White, Blue, WU, Colorless, etc.)
+                html.append("<div class='card-color-header'>")
                     .append(color)
-                    .append("</b><ul>");
+                    .append("</div>");
+
+                html.append("<div class='card-grid'>");
 
                 List<String> cardLabels = colors.get(color);
                 Collections.sort(cardLabels, String::compareToIgnoreCase);
 
                 for (String label : cardLabels) {
-                    html.append("<li>").append(label).append("</li>");
+
+                    // ex label: "3 Lightning Bolt"
+                    int idx = label.indexOf(' ');
+                    int count = 1;
+                    String cardName = label;
+
+                    if (idx > 0) {
+                        count = Integer.parseInt(label.substring(0, idx));
+                        cardName = label.substring(idx + 1).trim();
+                    }
+
+                    html.append("<div class='card-tile'>");
+
+                    CardData data = CardDataService.fetchCardData(cardName);
+                    String imgUrl = data.imageUrl;
+
+                    if (imgUrl != null) {
+                        html.append("<img src='")
+                            .append(imgUrl)
+                            .append("' alt='")
+                            .append(cardName.replace("'", "&#39;"))
+                            .append("'>");
+                    } else {
+                        // If no image is found, use a textbox
+                        html.append("<div class='card-fallback'>")
+                            .append(label)
+                            .append("</div>");
+                    }
+
+                    // Card counts for non-singleton cards
+                    if (count > 1) {
+                        html.append("<div class='card-count-badge'>x")
+                            .append(count)
+                            .append("</div>");
+                    }
+
+                    html.append("</div>"); // .card-tile
                 }
 
-                html.append("</ul></li>");
+                html.append("</div>"); // .card-grid
             }
-
-            html.append("</ul>");
         }
-
         return html.toString();
     }
 
-    /**
+     /**
      * Text file format WITHOUT grouping.
      * Sorted alphabetically.
      *
@@ -210,7 +253,6 @@ public class CardGrouping {
                     }
                 }
             }
-
             sb.append("# ")
               .append(type.toUpperCase())
               .append(" (")
