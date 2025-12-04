@@ -63,6 +63,7 @@ public class HtmlBuilder {
                     .card-grid {
                         display: flex;
                         flex-wrap: wrap;
+                        flex-direction: row;
                         gap: 12px;
                         margin: 8px 0 24px;
                     }
