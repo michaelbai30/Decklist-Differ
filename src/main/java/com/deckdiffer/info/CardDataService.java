@@ -89,7 +89,9 @@ public class CardDataService {
                 "Colorless",
                 0.0,
                 null,
-                null
+                null,
+                0.0,
+                Map.of()
             );
         }
         else {
@@ -118,7 +120,11 @@ public class CardDataService {
         String imageUrl = extractImageUrl(json);
         String scryfallUrl = json.optString("scryfall_uri", null);
 
-        return new CardData(json, types, primaryType, colors, colorCategory, price, imageUrl, scryfallUrl);
+        double cmc = CardInfoService.extractCMC(json);
+
+        Map<String, Integer> pipCounts = CardInfoService.parsePips(json.optString("mana_cost", ""));
+
+        return new CardData(json, types, primaryType, colors, colorCategory, price, imageUrl, scryfallUrl, cmc, pipCounts);
     }
 
 
