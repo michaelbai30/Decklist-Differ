@@ -169,20 +169,21 @@ public class CardInfoService {
     }
 
     /**
-     * @param card
+     * @param JSONObject json representing card data from scryfall
      * @return double price in USD
      */
-    public static double extractPriceFromJson(JSONObject card) {
-        if (card == null) return 0.0;
+    public static double extractPriceFromJson(JSONObject json) {
+        if (json == null) return 0.0;
 
-        JSONObject prices = card.optJSONObject("prices");
+        JSONObject prices =  json.optJSONObject("prices");
         if (prices == null) return 0.0;
 
         String usd = prices.optString("usd", "0.0");
 
         try {
             return Double.parseDouble(usd);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             return 0.0;
         }
     }
@@ -213,5 +214,71 @@ public class CardInfoService {
             return label.substring(idx + 1).trim();
         }
         return label;
+    }
+
+    /**
+     * @param JSONObject json representing card data from scryfall
+     * @return double representing converted mana cost
+     */
+    public static double extractCMC(JSONObject json){
+        if (json == null) return 0.0;
+        return json.optDouble("cmc", 0.0);
+    }
+
+    /**
+     * @param String manaCost
+     * @return Map<String, Integer> mapping Mana color (WUBRG) to amount
+     */
+
+    public static Map<String, Integer> parsePips(String manaCost){
+        Map<String, Integer> pipMap = new HashMap<>();
+        String[] wubrg = {"W", "U", "B", "R", "G"};
+        
+        // init
+        for (String color: wubrg){
+            pipMap.put(color, 0);
+        }
+
+        pipMap.put("C", 0); // represents colorless
+
+        if (manaCost == null || manaCost.isEmpty()){
+            return pipMap;
+        }
+
+        for (String chunk : manaCost.split("\\}")){
+            int open = chunk.indexOf('{');
+            if (open < 0){
+                continue;
+            }
+
+            String symbol = chunk.substring(open + 1).trim();
+
+            // Numerate the generic mana first
+            try{
+                int genericCost = Integer.parseInt(symbol);
+                pipMap.put("C", pipMap.get("C") + genericCost);
+                continue;
+            }
+            catch (Exception e){}
+
+            // Numerate WUBRG
+            if (pipMap.containsKey(symbol)){
+                pipMap.put(symbol, pipMap.get(symbol) + 1);
+            }
+
+            // Hybrid Mana, ex: "W/G" for pay with white or green
+            // we still count it as if it were 1.
+            // "W/G" contributes 1 white pip AND 1 green pip
+            if (symbol.contains("/")){
+                String[] manaParts = symbol.split("/");
+                for (String part: manaParts){
+                    if (pipMap.containsKey(part)){
+                        pipMap.put(part, pipMap.get(part) + 1);
+                    }
+                }
+            }
+        }
+        return pipMap;
+
     }
 }
