@@ -2,12 +2,29 @@
  * DeckStatsService.java; Contains logic for computing deck-wide stats like average cmc, number of pips, etc...
  */
 package com.deckdiffer.info;
+
 import java.util.*;
 
 public class DeckStatsService {
+
     private DeckStatsService(){}    
 
-    // Nested static class to return
+    // Nested static class for all deck statistics
+    public static class DeckStats{
+        public final Map<String, Integer> fullDeck;
+        public final double totalCost;
+        public final double onlyDiffCost;
+        public final ManaStats mana;
+
+        public DeckStats(Map<String, Integer> fullDeck, double totalCost, double onlyDiffCost, ManaStats mana){
+            this.fullDeck = fullDeck;
+            this.totalCost = totalCost;
+            this.onlyDiffCost = onlyDiffCost;
+            this.mana = mana;
+        }
+    }
+
+    // Nested static class for mana / cmc results
     public static class ManaStats{
         public final double totalCMC;
         public final int totalCards;
@@ -40,16 +57,23 @@ public class DeckStatsService {
         return fullDeck;
     }
 
-    /**
-     * @param fullDeck: Map<String, Integer> representing full deck of cards, name of card -> count
-     * @return ManaStats object containing info on totalCMC, totalNonLandCards, and totalPips
-     */
-    public static ManaStats computeManaStats(Map<String, Integer> fullDeck){
+
+    // Compute value + mana + pips in one pass
+    public static DeckStats computeDeckStats(Map<String, Integer> only, Map<String, Integer> common){
+
+        Map<String, Integer> fullDeck = buildFullDeck(only, common);
+
+        double totalCost = 0.0;
+        double onlyDiffCost = 0.0;
+
         double totalCMC = 0.0;
         int totalNonLandCards = 0;
+
          Map<String, Integer> totalPips= new HashMap<>(Map.of(
             "C", 0, "W", 0, "U", 0, "B", 0, "R", 0, "G", 0
         ));
+
+        Map<String, CardData> cache = new HashMap<>();
 
         for (var entry: fullDeck.entrySet()){
             String card = entry.getKey();
@@ -58,9 +82,19 @@ public class DeckStatsService {
                 continue;
             }
 
-            CardData data = CardDataService.fetchCardData(card);
+            CardData data = cache.computeIfAbsent(
+                card.toLowerCase(),
+                k -> CardDataService.fetchCardData(card)
+            );
+
             if (data == null){
                 continue;
+            }
+
+            // pricing
+            totalCost += data.price * count;
+            if (only.containsKey(card)){
+                onlyDiffCost += data.price * count;
             }
 
             // Count only non-land permanents for average cmc cost calculations
@@ -87,6 +121,7 @@ public class DeckStatsService {
             }
         }
 
-        return new ManaStats(totalCMC, totalNonLandCards, totalPips);
+        ManaStats manaStats = new ManaStats(totalCMC, totalNonLandCards, totalPips);
+        return new DeckStats(fullDeck, totalCost, onlyDiffCost, manaStats);
     }
 }

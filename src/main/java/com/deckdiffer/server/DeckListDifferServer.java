@@ -20,7 +20,8 @@ import com.deckdiffer.logic.DeckComparer;
 import com.deckdiffer.frontend.HtmlBuilder;
 import com.deckdiffer.parsing.DeckParser;
 import com.deckdiffer.info.DownloadService;
-import com.deckdiffer.info.CardInfoService;;
+import com.deckdiffer.info.CardInfoService;
+import com.deckdiffer.info.DeckStatsService;;
 
 public class DeckListDifferServer {
 
@@ -92,10 +93,11 @@ public class DeckListDifferServer {
                 deck2Types.put(e.getKey(), e.getValue()[1]);
             }
 
-            // Compute total cost of differing cards
-            // "It costs this much to get the cards only in deck 1 or deck 2"
-            double deck1DiffCost = CardInfoService.getTotalCost(deck1Only);
-            double deck2DiffCost= CardInfoService.getTotalCost(deck2Only);
+            DeckStatsService.DeckStats stats1 = DeckStatsService.computeDeckStats(deck1Only, inBoth);
+            DeckStatsService.DeckStats stats2 = DeckStatsService.computeDeckStats(deck2Only, inBoth);
+
+            double deck1DiffCost = stats1.onlyDiffCost;
+            double deck2DiffCost = stats2.onlyDiffCost;
 
             // Generate all downloadable files using CardGrouping
             DownloadService.saveFile("deck1_only.txt",

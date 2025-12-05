@@ -3,10 +3,10 @@
  *
  * Goal:
  * - Build the comparison result page HTML
- * - Render grouped card sections using grouping methods from CardGrouping
- * - Display the per-type count comparison between Deck 1 and Deck 2
- * - Display cost differences for cards unique to each deck
- * - Provide download links for the new comparison model
+ * - Render grouped card sections for cards in deck 1, deck 2, and in common
+ * - Display the per-type count comparison between deck 1 and deck 2
+ * - Display cost differences for cards unique to each deck, and total deck prices
+ * - Provide download links for comparing deck 1 and deck 2 cards.
  */
 
 package com.deckdiffer.frontend;
@@ -18,24 +18,25 @@ import java.util.TreeSet;
 import com.deckdiffer.grouping.CardGrouping;
 import com.deckdiffer.parsing.DeckParser;
 import com.deckdiffer.info.DeckStatsService;
-import com.deckdiffer.info.DeckStatsService.ManaStats;;
+import com.deckdiffer.info.DeckStatsService.ManaStats;
+import com.deckdiffer.info.DeckStatsService.DeckStats;
 
 public class HtmlBuilder {
 
     private HtmlBuilder() {}
 
-      /**
-      * HTML for the comparison results page
-      *
-      * @param deck1Only       Cards unique to Deck 1
-      * @param deck2Only       Cards unique to Deck 2
-      * @param common          Cards shared between Deck 1 + Deck 2
-      * @param deck1TypeCounts Type counts for Deck 1
-      * @param deck2TypeCounts Type counts for Deck 2
-      * @param deck1DiffCost   Total cost of cards only in Deck 1
-      * @param deck2DiffCost   Total cost of cards only in Deck 2
-      * @return HTML page as string
-      */
+    /**
+     * HTML for the comparison results page
+     *
+     * @param deck1Only       Cards unique to Deck 1
+     * @param deck2Only       Cards unique to Deck 2
+     * @param common          Cards shared between Deck 1 + Deck 2
+     * @param deck1TypeCounts Type counts for Deck 1
+     * @param deck2TypeCounts Type counts for Deck 2
+     * @param deck1DiffCost   Total cost of cards only in Deck 1
+     * @param deck2DiffCost   Total cost of cards only in Deck 2
+     * @return HTML page as string
+     */
     public static String buildResultsPage(
             Map<String, Integer> deck1Only,
             Map<String, Integer> deck2Only,
@@ -45,6 +46,13 @@ public class HtmlBuilder {
             double deck1DiffCost,
             double deck2DiffCost)
     {
+        // Compute all deck stats in one call per deck
+        DeckStats stats1 = DeckStatsService.computeDeckStats(deck1Only, common);
+        DeckStats stats2 = DeckStatsService.computeDeckStats(deck2Only, common);
+
+        ManaStats d1 = stats1.mana;
+        ManaStats d2 = stats2.mana;
+
         StringBuilder html = new StringBuilder();
 
         html.append("""
@@ -105,15 +113,6 @@ public class HtmlBuilder {
                         font-weight: bold;
                     }
 
-                    .card-color-header {
-                        margin: 4px 0;
-                        font-weight: bold;
-                    }
-
-                    .card-link {
-                        text-decoration: none;
-                    }
-
                     /* Collapsible section controls */
                     .section-header {
                         cursor: pointer;
@@ -144,14 +143,22 @@ public class HtmlBuilder {
                 <h1>Deck Comparison Results</h1>
         """);
 
-        // Cost Summary
+        // Price Summary
         html.append("<div class='cost-box'>")
-            .append("<h2>Cost Difference Summary</h2>")
-            .append("<p><b>Deck 1 Only Value:</b> $")
-            .append(String.format("%.2f", deck1DiffCost))
+            .append("<h2>Deck Prices</h2>")
+            .append("<p><b>Deck 1 Price:</b> $")
+            .append(String.format("%.2f", stats1.totalCost))
             .append("</p>")
-            .append("<p><b>Deck 2 Only Value:</b> $")
-            .append(String.format("%.2f", deck2DiffCost))
+            .append("<p><b>Deck 2 Price:</b> $")
+            .append(String.format("%.2f", stats2.totalCost))
+            .append("</p>")
+
+            .append("<h3>Difference (Upgrades Needed)</h3>")
+            .append("<p><b>Deck 1 Only Prices:</b> $")
+            .append(String.format("%.2f", stats1.onlyDiffCost))
+            .append("</p>")
+            .append("<p><b>Deck 2 Only Prices:</b> $")
+            .append(String.format("%.2f", stats2.onlyDiffCost))
             .append("</p>")
             .append("</div><hr>");
 
@@ -181,12 +188,6 @@ public class HtmlBuilder {
         html.append("</ul><hr>");
 
         // Mana Curve and Pips Section
-        Map<String, Integer> deck1Full = DeckStatsService.buildFullDeck(deck1Only, common);
-        Map<String, Integer> deck2Full = DeckStatsService.buildFullDeck(deck2Only, common);
-
-        ManaStats d1 = DeckStatsService.computeManaStats(deck1Full);
-        ManaStats d2 = DeckStatsService.computeManaStats(deck2Full);
-
         html.append("<h2>Mana Curve and Color Breakdown</h2>");
 
         html.append("<table border='1' cellpadding='6' cellspacing='0'>")
@@ -214,12 +215,11 @@ public class HtmlBuilder {
             </div>
             <div class='section-content' id='sec1'>
         """);
-
         html.append(CardGrouping.buildGroupedHtml(deck1Only));
         html.append("</div><hr>");
 
         // Deck 2 Only
-         html.append("""
+        html.append("""
             <div class='section-header' onclick="toggleSection('sec2', this)">
             <span class="arrow">▶</span> In Deck 2, Not in Deck 1 (""")
             .append(DeckParser.sumCounts(deck2Only)).append(")")
@@ -231,7 +231,7 @@ public class HtmlBuilder {
         html.append("</div><hr>");
 
         // Common Cards
-         html.append("""
+        html.append("""
             <div class='section-header' onclick="toggleSection('sec3', this)">
             <span class="arrow">▶</span> Common in Both Decks (""")
             .append(DeckParser.sumCounts(common)).append(")")
@@ -265,16 +265,14 @@ public class HtmlBuilder {
                     if (!e) return;
 
                     const arrow = headerEl.querySelector('.arrow');
-
-                    const isClosed = (e.style.display ==="none" || e.style.display === "");
+                    const isClosed = (e.style.display === "none" || e.style.display === "");
 
                     if (isClosed){
                         e.style.display = "block";
                         if (arrow){
                             arrow.textContent = "▼";
                         }
-                    }
-                    else{
+                    } else {
                         e.style.display = "none";
                         if (arrow){
                             arrow.textContent = "▶";
