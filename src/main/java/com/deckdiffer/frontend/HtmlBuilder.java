@@ -17,6 +17,8 @@ import java.util.TreeSet;
 
 import com.deckdiffer.grouping.CardGrouping;
 import com.deckdiffer.parsing.DeckParser;
+import com.deckdiffer.info.DeckStatsService;
+import com.deckdiffer.info.DeckStatsService.ManaStats;;
 
 public class HtmlBuilder {
 
@@ -177,6 +179,31 @@ public class HtmlBuilder {
         }
 
         html.append("</ul><hr>");
+
+        // Mana Curve and Pips Section
+        Map<String, Integer> deck1Full = DeckStatsService.buildFullDeck(deck1Only, common);
+        Map<String, Integer> deck2Full = DeckStatsService.buildFullDeck(deck2Only, common);
+
+        ManaStats d1 = DeckStatsService.computeManaStats(deck1Full);
+        ManaStats d2 = DeckStatsService.computeManaStats(deck2Full);
+
+        html.append("<h2>Mana Curve and Color Breakdown</h2>");
+
+        html.append("<table border='1' cellpadding='6' cellspacing='0'>")
+            .append("<tr><th></th><th>Deck 1</th><th>Deck 2</th></tr>")
+            .append("<tr><td><b>Average CMC</b></td>")
+            .append("<td>").append(String.format("%.2f", d1.getAverageCMC())).append("</td>")
+            .append("<td>").append(String.format("%.2f", d2.getAverageCMC())).append("</td></tr>");
+
+        String[] colors = {"C","W","U","B","R","G"};
+        String[] labels = {"Colorless","White","Blue","Black","Red","Green"};
+
+        for (int i = 0; i < colors.length; i++) {
+            html.append("<tr><td><b>").append(labels[i]).append(" Pips</b></td>")
+                .append("<td>").append(d1.totalPips.get(colors[i])).append("</td>")
+                .append("<td>").append(d2.totalPips.get(colors[i])).append("</td></tr>");
+        }
+        html.append("</table><hr>");
 
         // Deck 1 Only
         html.append("""
