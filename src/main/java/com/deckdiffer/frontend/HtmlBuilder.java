@@ -17,9 +17,9 @@ import java.util.TreeSet;
 
 import com.deckdiffer.grouping.CardGrouping;
 import com.deckdiffer.parsing.DeckParser;
-import com.deckdiffer.info.DeckStatsService;
-import com.deckdiffer.info.DeckStatsService.ManaStats;
-import com.deckdiffer.info.DeckStatsService.DeckStats;
+import com.deckdiffer.stats.DeckStats;
+import com.deckdiffer.stats.DeckStats.DeckStat;
+import com.deckdiffer.stats.DeckStats.ManaStats;
 
 public class HtmlBuilder {
 
@@ -47,8 +47,8 @@ public class HtmlBuilder {
             double deck2DiffCost)
     {
         // Compute all deck stats in one call per deck
-        DeckStats stats1 = DeckStatsService.computeDeckStats(deck1Only, common);
-        DeckStats stats2 = DeckStatsService.computeDeckStats(deck2Only, common);
+        DeckStat stats1 = DeckStats.computeDeckStats(deck1Only, common);
+        DeckStat stats2 = DeckStats.computeDeckStats(deck2Only, common);
 
         ManaStats d1 = stats1.mana;
         ManaStats d2 = stats2.mana;

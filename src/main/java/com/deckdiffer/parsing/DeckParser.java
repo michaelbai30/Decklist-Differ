@@ -1,24 +1,8 @@
 /**
  * DeckParser.java: Responsible for parsing decklist text into structured data
  * 
- * Provides utility methods or converting raw decklist text into card name -> quantity map,
+ * Provides utility methods for converting raw decklist text into card name -> quantity map,
  * counting total card counts, converting maps back into lines, and writing into txt file.
- * 
- * Methods: 
- * - Map<String, Integer> parseDeck(String):
- *      Takes mutli-line deck text and returns Map<String, Integer>, card name -> quant
- * 
- * - int sumCounts(Map<String, Integer>):
- *      Returns total number of cards in a "deck"
- * 
- * - List<String> mapToLines(Map<String, Integer)
- *      Convert a card map into list of formatted strings like "3 Lightning Bolt"
- * 
- * - void writeToFile(String, List<String>):
- *      Writes a list of text lines to a file on disk
- * 
- * - Map<String, Integer> normalizeNames(Map<String, Integer> map):
- *   Strips off everything after "//" for MDFC cards
  */
 
 package com.deckdiffer.parsing;
@@ -106,7 +90,6 @@ public class DeckParser {
     }
 
     /**
-     * 
      * @param fileName
      * @param lines
      */
@@ -146,4 +129,15 @@ public class DeckParser {
         return res;
     }
 
+    /**
+     * @param label ex: "1 Island"
+     * @return ex: "Island"
+     */
+    public static String extractCardNameFromLabel(String label){
+        int idx = label.indexOf(' ');
+        if (idx > 0){
+            return label.substring(idx + 1).trim();
+        }
+        return label;
+    }
 }

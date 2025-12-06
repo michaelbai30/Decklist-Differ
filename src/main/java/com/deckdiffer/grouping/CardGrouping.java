@@ -5,33 +5,16 @@
  * generating HTML sections for UI display, and producing detailed text output
  * for downloadable files.
  *
- * Uses CardInfoService + CardDataService to determine type and color data.
- *
- * Methods:
- * - Map<String, Map<String, List<String>>> groupTypeThenColor(Map<String, Integer>):
- *      Groups cards first by PRIMARY TYPE, then by COLOR CATEGORY.
- *
- * - String buildGroupedHtml(String, Map<String, Integer>):
- *      Builds fully formatted HTML representing grouped card data.
- *
- * - String buildNonDetailedTxtFile(Map<String, Integer>):
- *      Produces a non detailed text representation of ungrouped cards sorted alphabetically
- * 
- * - String buildDetailedTxtFile(Map<String, Integer>):
- *      Produces a detailed text representation of cards grouped by type and color.
- *
- * - String buildDisplayLabel(String, int):
- *      Converts a card name + count into a display string like "3 Lightning Bolt".
+ * Uses CardClassifier + CardDataProvider to determine type and color data.
  */
 
 package com.deckdiffer.grouping;
 
 import java.util.*;
 
-import com.deckdiffer.info.CardData;
-import com.deckdiffer.info.CardInfoService;
-import com.deckdiffer.info.CardDataService;
-import com.deckdiffer.parsing.DeckParser;
+import com.deckdiffer.cards.CardClassifier;
+import com.deckdiffer.cards.CardData;
+import com.deckdiffer.cards.CardDataProvider;
 
 public class CardGrouping {
 
@@ -69,7 +52,7 @@ public class CardGrouping {
             String card = entry.getKey();
             int count = entry.getValue();
 
-            CardData data = CardDataService.fetchCardData(card);
+            CardData data = CardDataProvider.fetchCardData(card);
             String primaryType = data.primaryType;
             String colorCategory = data.colorCategory;
 
@@ -90,6 +73,9 @@ public class CardGrouping {
      * @return block of html representing grouped card data
      */
     public static String buildGroupedHtml(Map<String, Integer> cardMap) {
+
+        Map<String, CardData> dataCache = new HashMap<>();
+
         StringBuilder html = new StringBuilder();
 
         // Group cards: primary type -> color -> labels
@@ -97,7 +83,7 @@ public class CardGrouping {
 
         // Sort primary types by priority
         List<String> primaryTypes = new ArrayList<>(grouped.keySet());
-        primaryTypes.sort(Comparator.comparingInt(CardInfoService::typeToPriority));
+        primaryTypes.sort(Comparator.comparingInt(CardClassifier::typeToPriority));
 
         for (String type : primaryTypes) {
 
@@ -121,7 +107,7 @@ public class CardGrouping {
 
             // Sort color categories using colorSortKey
             List<String> colorKeys = new ArrayList<>(colors.keySet());
-            colorKeys.sort(Comparator.comparingInt(CardInfoService::colorSortKey));
+            colorKeys.sort(Comparator.comparingInt(CardClassifier::colorSortKey));
 
             for (String color : colorKeys) {
 
@@ -147,7 +133,13 @@ public class CardGrouping {
                         cardName = label.substring(idx + 1).trim();
                     }
 
-                    CardData data = CardDataService.fetchCardData(cardName);
+                    String nameKey = cardName.toLowerCase();
+                    final String lookupName = cardName;
+
+                    CardData data = dataCache.computeIfAbsent(
+                        nameKey,
+                        k -> CardDataProvider.fetchCardData(lookupName)
+                    );
 
                     html.append("<a class='card-link' href='")
                         .append(data.scryfallUrl)
@@ -231,7 +223,7 @@ public class CardGrouping {
 
         // Sort primary types
         List<String> primaryTypes = new ArrayList<>(grouped.keySet());
-        primaryTypes.sort(Comparator.comparingInt(CardInfoService::typeToPriority));
+        primaryTypes.sort(Comparator.comparingInt(CardClassifier::typeToPriority));
 
         for (String type : primaryTypes) {
 
@@ -254,7 +246,7 @@ public class CardGrouping {
               .append(")\n");
 
             List<String> colorKeys = new ArrayList<>(colors.keySet());
-            colorKeys.sort(Comparator.comparingInt(CardInfoService::colorSortKey));
+            colorKeys.sort(Comparator.comparingInt(CardClassifier::colorSortKey));
 
             for (String color : colorKeys) {
 

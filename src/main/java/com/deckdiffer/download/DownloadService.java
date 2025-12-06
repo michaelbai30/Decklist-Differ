@@ -7,14 +7,12 @@
  * - Maintain an in-memory map of filename → file contents
  */
 
-package com.deckdiffer.info;
-
+package com.deckdiffer.download;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class DownloadService {
-
     // Stores ALL downloadable text files generated during comparison
     private static final Map<String, String> generatedFiles = new HashMap<>();
 

@@ -1,5 +1,5 @@
 /**
- * DeckComparer.java; Performs comparison logic between two decklists.
+ * DeckComparer.java: Performs comparison logic between two decklists.
  *
  * Determines:
  * - cards unique to Deck 1
@@ -17,45 +17,32 @@ public class DeckComparer {
 
     private DeckComparer() {}
 
-    /**
-     * @param deck1 Map<String, Integer> 
+    private static Map<String, Integer> computeDifference(Map<String, Integer> a, Map<String, Integer> b) {
+        Map<String, Integer> res = new LinkedHashMap<>();
+
+        for (String card : a.keySet()) {
+            int diff = a.getOrDefault(card, 0) - b.getOrDefault(card, 0);
+            if (diff > 0) {
+                res.put(card, diff);
+            }
+        }
+        return res;
+    }
+    /**@param deck1 Map<String, Integer>
      * @param deck2 Map<String, Integer>
      * @return cards that appear exclusively in Deck 1 with their counts
      */
     public static Map<String, Integer> computeDeck1Only(Map<String, Integer> deck1, Map<String, Integer> deck2) {
-
-        Map<String, Integer> result = new LinkedHashMap<>();
-
-        for (String card: deck1.keySet()){
-            int count1 = deck1.getOrDefault(card, 0);
-            int count2 = deck2.getOrDefault(card, 0);
-
-            if (count1 > count2){
-                result.put(card, count1 - count2);
-            }
-        }
-        return result;
+        return computeDifference(deck1, deck2);
     }
 
-    /**
-     * @param deck1 Map<String, Integer>
+    /**@param deck1 Map<String, Integer>
      * @param deck2 Map<String, Integer>
      * @return cards that appear exclusively in Deck 2 with their counts
      */
     public static Map<String, Integer> computeDeck2Only(Map<String, Integer> deck1, Map<String, Integer> deck2) {
-
-        Map<String, Integer> result = new LinkedHashMap<>();
-
-        for (String card: deck2.keySet()){
-            int count1 = deck1.getOrDefault(card, 0);
-            int count2 = deck2.getOrDefault(card, 0);
-
-            if (count2 > count1){
-                result.put(card, count2 - count1);
-            }
-        }
-        return result;
-    } 
+        return computeDifference(deck2, deck1);
+    }
 
     /**
      * @param deck1 Map<String, Integer> representing Deck 1
@@ -91,7 +78,7 @@ public class DeckComparer {
      * value[1] = count in Deck 2
      * Ex: Creature -> {20, 25} // The amount of creatures in the deck increased from 20 cards to 25 cards
      */
-    public static Map<String, int[]> computeTypeChanges(Map<String, Integer> deck1, Map<String, Integer> deck2) {
+    public static Map<String, int[]> computeTypeDifferences(Map<String, Integer> deck1, Map<String, Integer> deck2) {
 
         Map<String, Integer> d1Types = CardStats.computeTypeCounts(deck1);
         Map<String, Integer> d2Types = CardStats.computeTypeCounts(deck2);

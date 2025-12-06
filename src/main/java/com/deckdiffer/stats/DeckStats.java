@@ -1,22 +1,26 @@
 /**
  * DeckStatsService.java; Contains logic for computing deck-wide stats like average cmc, number of pips, etc...
+ * Contains nested classes for ManaStats
  */
-package com.deckdiffer.info;
+package com.deckdiffer.stats;
 
 import java.util.*;
 
-public class DeckStatsService {
+import com.deckdiffer.cards.CardData;
+import com.deckdiffer.cards.CardDataProvider;
 
-    private DeckStatsService(){}    
+public class DeckStats {
+
+    private DeckStats(){}    
 
     // Nested static class for all deck statistics
-    public static class DeckStats{
+    public static class DeckStat{
         public final Map<String, Integer> fullDeck;
         public final double totalCost;
         public final double onlyDiffCost;
         public final ManaStats mana;
 
-        public DeckStats(Map<String, Integer> fullDeck, double totalCost, double onlyDiffCost, ManaStats mana){
+        public DeckStat(Map<String, Integer> fullDeck, double totalCost, double onlyDiffCost, ManaStats mana){
             this.fullDeck = fullDeck;
             this.totalCost = totalCost;
             this.onlyDiffCost = onlyDiffCost;
@@ -57,9 +61,8 @@ public class DeckStatsService {
         return fullDeck;
     }
 
-
     // Compute value + mana + pips in one pass
-    public static DeckStats computeDeckStats(Map<String, Integer> only, Map<String, Integer> common){
+    public static DeckStat computeDeckStats(Map<String, Integer> only, Map<String, Integer> common){
 
         Map<String, Integer> fullDeck = buildFullDeck(only, common);
 
@@ -84,7 +87,7 @@ public class DeckStatsService {
 
             CardData data = cache.computeIfAbsent(
                 card.toLowerCase(),
-                k -> CardDataService.fetchCardData(card)
+                k -> CardDataProvider.fetchCardData(card)
             );
 
             if (data == null){
@@ -122,6 +125,6 @@ public class DeckStatsService {
         }
 
         ManaStats manaStats = new ManaStats(totalCMC, totalNonLandCards, totalPips);
-        return new DeckStats(fullDeck, totalCost, onlyDiffCost, manaStats);
+        return new DeckStat(fullDeck, totalCost, onlyDiffCost, manaStats);
     }
 }

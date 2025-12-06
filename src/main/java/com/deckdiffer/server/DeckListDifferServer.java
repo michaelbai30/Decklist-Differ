@@ -17,11 +17,10 @@ import java.util.*;
 
 import com.deckdiffer.grouping.CardGrouping;
 import com.deckdiffer.logic.DeckComparer;
+import com.deckdiffer.download.DownloadService;
 import com.deckdiffer.frontend.HtmlBuilder;
 import com.deckdiffer.parsing.DeckParser;
-import com.deckdiffer.info.DownloadService;
-import com.deckdiffer.info.CardInfoService;
-import com.deckdiffer.info.DeckStatsService;;
+import com.deckdiffer.stats.DeckStats;
 
 public class DeckListDifferServer {
 
@@ -70,6 +69,11 @@ public class DeckListDifferServer {
             String deck1Text= req.queryParams("deck1Text");
             String deck2Text = req.queryParams("deck2Text");
 
+            if (deck1Text == null || deck1Text.isBlank() || deck2Text == null || deck2Text.isBlank()) {
+                res.status(400);
+                return "<h2>Please enter both deck lists</h2><a href='/'>Go Back</a>";
+            }
+
             // Parse decks and normalize names
             Map<String, Integer> deck1Map = DeckParser.parseDeck(deck1Text);
             Map<String, Integer> deck2Map = DeckParser.parseDeck(deck2Text);
@@ -83,7 +87,7 @@ public class DeckListDifferServer {
             Map<String, Integer> inBoth = DeckComparer.computeCardsInCommon(deck1Map, deck2Map);
 
             // Compute type count changes
-            Map<String, int[]> typeChanges  = DeckComparer.computeTypeChanges(deck1Map, deck2Map);
+            Map<String, int[]> typeChanges  = DeckComparer.computeTypeDifferences(deck1Map, deck2Map);
 
             Map<String, Integer> deck1Types = new LinkedHashMap<>();
             Map<String, Integer> deck2Types = new LinkedHashMap<>();
@@ -93,8 +97,8 @@ public class DeckListDifferServer {
                 deck2Types.put(e.getKey(), e.getValue()[1]);
             }
 
-            DeckStatsService.DeckStats stats1 = DeckStatsService.computeDeckStats(deck1Only, inBoth);
-            DeckStatsService.DeckStats stats2 = DeckStatsService.computeDeckStats(deck2Only, inBoth);
+            DeckStats.DeckStat stats1 = DeckStats.computeDeckStats(deck1Only, inBoth);
+            DeckStats.DeckStat stats2 = DeckStats.computeDeckStats(deck2Only, inBoth);
 
             double deck1DiffCost = stats1.onlyDiffCost;
             double deck2DiffCost = stats2.onlyDiffCost;
