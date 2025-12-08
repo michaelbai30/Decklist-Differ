@@ -2,7 +2,7 @@
  * CardClassifier.java
  *
  * Provides helper methods for determining card types, primary types, color identities,
- *  and sorting categories
+ * and sorting categories
  */
 
 package com.deckdiffer.cards;
@@ -49,14 +49,15 @@ public class CardClassifier {
             return idx;
         }
         else{
-            return 9999;
+            return 9999; // Lowest priority
         }
     }
 
     /**
      * @param colorIdentity
      * @return string representing color identity with abbrevs
-     * ex: ["W", "U"] -> "WU"
+     * ex: {"W", "U"} -> "WU"
+     * {"W"} -> "White"
      */
     public static String assignColorCategory(List<String> colorIdentity){
         if (colorIdentity == null || colorIdentity.isEmpty()){

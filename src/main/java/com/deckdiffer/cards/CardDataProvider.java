@@ -1,6 +1,8 @@
 /**
  * CardDataProvider.java; Fetches Scryfall JSON and converts it into CardData objects.
  *
+ * Card Name -> Scryfall -> JSON -> CardData
+ * 
  * Responsibilities:
  * - Perform fuzzy-name Scryfall API lookups
  * - Cache JSON to minimize repeated API calls
@@ -13,12 +15,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -190,7 +187,6 @@ public class CardDataProvider {
                 res.add(arr.getString(i));
             }
         }
-        Collections.sort(res);
         return res;
     }
 
@@ -223,7 +219,7 @@ public class CardDataProvider {
     public static double extractPriceFromJson(JSONObject json) {
         if (json == null) return 0.0;
 
-        JSONObject prices =  json.optJSONObject("prices");
+        JSONObject prices = json.optJSONObject("prices");
         if (prices == null) return 0.0;
 
         String usd = prices.optString("usd", "0.0");
