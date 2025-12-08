@@ -6,7 +6,7 @@
  * - Render grouped card sections for cards in deck 1, deck 2, and in common
  * - Display the per-type count comparison between deck 1 and deck 2
  * - Display cost differences for cards unique to each deck, and total deck prices
- * - Provide download links for comparing deck 1 and deck 2 cards.
+ * - Provide download links and clipboard copying for comparing deck 1 and deck 2 cards.
  */
 
 package com.deckdiffer.frontend;
@@ -137,6 +137,20 @@ public class HtmlBuilder {
                         color: #555;
                         margin-right: 8px;
                     }
+
+                    .copy-btn {
+                        margin-left: 8px;
+                        background: #ddd;
+                        border: 1px solid #aaa;
+                        border-radius: 4px;
+                        padding: 2px 6px;
+                        font-size: 12px;
+                        cursor: pointer;
+                    }
+
+                    .copy-btn:hover {
+                        background: #ccc;
+                    }
                 </style>
             </head>
             <body>
@@ -209,10 +223,15 @@ public class HtmlBuilder {
         // Deck 1 Only
         html.append("""
             <div class='section-header' onclick="toggleSection('sec1', this)">
-            <span class="arrow">▶</span> In Deck 1, Not in Deck 2 (""")
+                <span class="arrow">▶</span> In Deck 1, Not in Deck 2 (""")
             .append(DeckParser.sumCounts(deck1Only)).append(")")
             .append("""
+                <button class='copy-btn' onclick="copySection(event, 'deck1only-copy')">Copy</button>
             </div>
+            <textarea id='deck1only-copy' style='display:none;'>""")
+            .append(CardGrouping.buildNonDetailedTxtFile(deck1Only))
+            .append("""
+            </textarea>
             <div class='section-content' id='sec1'>
         """);
         html.append(CardGrouping.buildGroupedHtml(deck1Only));
@@ -221,10 +240,15 @@ public class HtmlBuilder {
         // Deck 2 Only
         html.append("""
             <div class='section-header' onclick="toggleSection('sec2', this)">
-            <span class="arrow">▶</span> In Deck 2, Not in Deck 1 (""")
+                <span class="arrow">▶</span> In Deck 2, Not in Deck 1 (""")
             .append(DeckParser.sumCounts(deck2Only)).append(")")
             .append("""
+                <button class='copy-btn' onclick="copySection(event,'deck2only-copy')">Copy</button>
             </div>
+            <textarea id='deck2only-copy' style='display:none;'>""")
+            .append(CardGrouping.buildNonDetailedTxtFile(deck2Only))
+            .append("""
+            </textarea>
             <div class='section-content' id='sec2'>
         """);
         html.append(CardGrouping.buildGroupedHtml(deck2Only));
@@ -233,10 +257,15 @@ public class HtmlBuilder {
         // Common Cards
         html.append("""
             <div class='section-header' onclick="toggleSection('sec3', this)">
-            <span class="arrow">▶</span> Common in Both Decks (""")
+                <span class="arrow">▶</span> Common in Both Decks (""")
             .append(DeckParser.sumCounts(common)).append(")")
             .append("""
+                <button class='copy-btn' onclick="copySection(event, 'common-copy')">Copy</button>
             </div>
+            <textarea id='common-copy' style='display:none;'>""")
+            .append(CardGrouping.buildNonDetailedTxtFile(common))
+            .append("""
+            </textarea>
             <div class='section-content' id='sec3'>
         """);
         html.append(CardGrouping.buildGroupedHtml(common));
@@ -278,6 +307,14 @@ public class HtmlBuilder {
                             arrow.textContent = "▶";
                         }
                     }
+                }
+                function copySection(event, id){
+                    event.stopPropagation();
+                    const e = document.getElementById(id);
+                    if (!e){
+                        return;
+                    }
+                    navigator.clipboard.writeText(e.value);
                 }
             </script>
         """);
