@@ -9,12 +9,12 @@
 
 package com.deckdiffer.download;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DownloadService {
     // Stores ALL downloadable text files generated during comparison
-    private static final Map<String, String> generatedFiles = new HashMap<>();
+    private static final Map<String, String> generatedFiles = new ConcurrentHashMap<>();
 
     private DownloadService() {}
 
