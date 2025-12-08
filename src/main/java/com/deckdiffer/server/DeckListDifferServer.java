@@ -132,26 +132,10 @@ public class DeckListDifferServer {
                 deck1DiffCost,
                 deck2DiffCost
             );
-        });
-
-        
+        }); 
         // ===== Download Route =====
         get("/download/:filename", (req, res) -> {
             String fileName = req.params(":filename") + ".txt";
-
-            if (!DownloadService.exists(fileName)) {
-                res.status(404);
-                return "File Not Found";
-            }
-
-            res.type("text/plain");
-            res.header("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
-            return DownloadService.getFile(fileName);
-        });
-
-        
-        get("/download/:filename_detailed", (req, res) -> {
-            String fileName = req.params(":filename_detailed") + ".txt";
 
             if (!DownloadService.exists(fileName)) {
                 res.status(404);
