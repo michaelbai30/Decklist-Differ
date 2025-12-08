@@ -69,7 +69,6 @@ public class HtmlBuilder {
                         border-radius:6px;
                     }
 
-                    /* Grid-based card display */
                     .card-grid {
                         display: flex;
                         flex-wrap: wrap;
@@ -157,7 +156,7 @@ public class HtmlBuilder {
                 <h1>Deck Comparison Results</h1>
         """);
 
-        // Price Summary
+        /* Price Summary */
         html.append("<div class='cost-box'>")
             .append("<h2>Deck Prices</h2>")
             .append("<p><b>Deck 1 Price:</b> $")
@@ -176,7 +175,7 @@ public class HtmlBuilder {
             .append("</p>")
             .append("</div><hr>");
 
-        // Type Difference Summary
+        /* Type Difference Summary */
         html.append("<h2>Card Type Differences</h2><ul>");
 
         Set<String> allTypes = new TreeSet<>();
@@ -198,10 +197,9 @@ public class HtmlBuilder {
                 .append(Math.abs(diff))
                 .append(")</li>");
         }
-
         html.append("</ul><hr>");
 
-        // Mana Curve and Pips Section
+        /* Mana Curve and Color Breakdown (Pips) Section */
         html.append("<h2>Mana Curve and Color Breakdown</h2>");
 
         html.append("<table border='1' cellpadding='6' cellspacing='0'>")
@@ -220,7 +218,7 @@ public class HtmlBuilder {
         }
         html.append("</table><hr>");
 
-        // Deck 1 Only
+        /* Deck 1 Only */
         html.append("""
             <div class='section-header' onclick="toggleSection('sec1', this)">
                 <span class="arrow">▶</span> In Deck 1, Not in Deck 2 (""")
@@ -237,7 +235,7 @@ public class HtmlBuilder {
         html.append(CardGrouping.buildGroupedHtml(deck1Only));
         html.append("</div><hr>");
 
-        // Deck 2 Only
+        /* Deck 2 Only */
         html.append("""
             <div class='section-header' onclick="toggleSection('sec2', this)">
                 <span class="arrow">▶</span> In Deck 2, Not in Deck 1 (""")
@@ -254,7 +252,7 @@ public class HtmlBuilder {
         html.append(CardGrouping.buildGroupedHtml(deck2Only));
         html.append("</div><hr>");
 
-        // Common Cards
+        /* Common Cards */
         html.append("""
             <div class='section-header' onclick="toggleSection('sec3', this)">
                 <span class="arrow">▶</span> Common in Both Decks (""")
@@ -271,7 +269,7 @@ public class HtmlBuilder {
         html.append(CardGrouping.buildGroupedHtml(common));
         html.append("</div>");
 
-        // Download Links
+        /* Embed Download Links */
         html.append("""
             <hr><h3>Download Results</h3>
 
@@ -286,7 +284,7 @@ public class HtmlBuilder {
             <a href='/'>Compare Another Pair of Decks</a>
         """);
 
-        // Collapsible toggle
+        /* JS Scripts */
         html.append("""
             <script>
                 function toggleSection(id, headerEl) {
