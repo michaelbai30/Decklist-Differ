@@ -11,19 +11,21 @@
  */
 
 package com.deckdiffer.cards;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class CardDataProvider {
 
-    private static final Map<String, JSONObject> cardJsonCache = new HashMap<>();
-    private static final Map<String, CardData> cardDataCache = new HashMap<>();
+    private static final Map<String, JSONObject> cardJsonCache = new ConcurrentHashMap<>();
+    private static final Map<String, CardData> cardDataCache = new ConcurrentHashMap<>();
 
     // Card Type Definitions
     private static final Set<String> CARD_TYPES = Set.of(
@@ -32,6 +34,39 @@ public class CardDataProvider {
     );
 
     private CardDataProvider() {
+    }
+
+    /**
+     * Populates the cache using the fast batch API for all required cards.
+     * DeckListDifferServer calls this method just once per comparison.
+     * @param cardNames
+     */
+    public static void populateCacheInBatch(Set<String> cardNames) {
+        // Don't include names already in the cache
+        Set<String> namesToFetch = new HashSet<>();
+        for (String name : cardNames) {
+            if (!cardDataCache.containsKey(name.toLowerCase())) {
+                namesToFetch.add(name);
+            }
+        }
+
+        if (namesToFetch.isEmpty()) {
+            return;
+        }
+
+        // Execute fast batch fetch
+        Map<String, JSONObject> newFetchedJson = ScryfallBatchFetcher.fetchBatchJson(namesToFetch);
+
+        // Add results to our static caches
+        for (Map.Entry<String, JSONObject> entry : newFetchedJson.entrySet()) {
+            String cardName = entry.getKey();
+            JSONObject json = entry.getValue();
+            String key = cardName.toLowerCase();
+
+            cardJsonCache.put(key, json);
+            CardData data = buildCardDataFromJson(json);
+            cardDataCache.put(key, data);
+        }
     }
 
     /**
@@ -75,7 +110,7 @@ public class CardDataProvider {
 
     /**
      * @param cardName
-     * @return CardData object extracted from fetchCardJson
+     * @return CardData object extracted from cache or fetchCardJson
      */
     public static CardData fetchCardData(String cardName) {
         String key = cardName.toLowerCase();
@@ -84,7 +119,11 @@ public class CardDataProvider {
             return cardDataCache.get(key);
         }
 
-        JSONObject json = fetchCardJson(cardName);
+        JSONObject json = cardJsonCache.get(key);
+        // if no JSON, fetch it (slow fallback)
+        if (json == null) {
+             json = fetchCardJson(cardName);
+        }
 
         CardData data;
 
@@ -110,8 +149,11 @@ public class CardDataProvider {
         return data;
     }
 
+    // ---------------
+    // Helper Methods
+    // ---------------
+
     /**
-     * Helper
      * @param json
      * @return CardData
      */
@@ -135,7 +177,7 @@ public class CardDataProvider {
         return new CardData(json, types, primaryType, colors, colorCategory, price, imageUrl, scryfallUrl, cmc, pipCounts);
     }
 
-     /**
+    /**
      * @param card
      * @return List of types from a card typeline
      */
@@ -150,7 +192,7 @@ public class CardDataProvider {
             JSONArray faces = card.optJSONArray("card_faces");
             if (faces.length() > 0) {
                 typeLine = faces.getJSONObject(0).optString("type_line", "");
-            } 
+            }
             else {
                 typeLine = card.optString("type_line", "");
             }
@@ -245,7 +287,6 @@ public class CardDataProvider {
      * @param String manaCost
      * @return Map<String, Integer> mapping Mana color (WUBRG) to amount
      */
-
     public static Map<String, Integer> parsePips(String manaCost){
         Map<String, Integer> pipMap = new HashMap<>();
         String[] wubrg = {"W", "U", "B", "R", "G"};

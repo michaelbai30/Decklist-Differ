@@ -94,6 +94,7 @@ public class DeckListDifferServer {
             allUniqueNames.addAll(deck2Only.keySet());
             allUniqueNames.addAll(inBoth.keySet());
 
+            CardDataProvider.populateCacheInBatch(allUniqueNames);
             Map<String, CardData> cardDataCache = new HashMap<>();
 
             for (String cardName : allUniqueNames) {
