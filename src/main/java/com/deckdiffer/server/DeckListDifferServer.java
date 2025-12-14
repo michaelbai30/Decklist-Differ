@@ -15,6 +15,8 @@ import static spark.Spark.*;
 
 import java.util.*;
 
+import com.deckdiffer.cards.CardData;
+import com.deckdiffer.cards.CardDataProvider;
 import com.deckdiffer.grouping.CardGrouping;
 import com.deckdiffer.logic.DeckComparer;
 import com.deckdiffer.download.DownloadService;
@@ -86,6 +88,21 @@ public class DeckListDifferServer {
             Map<String, Integer> deck2Only = DeckComparer.computeDeck2Only(deck1Map, deck2Map);   // in 2 not 1
             Map<String, Integer> inBoth = DeckComparer.computeCardsInCommon(deck1Map, deck2Map);
 
+            // Centralize data fetching
+            Set<String> allUniqueNames = new HashSet<>();
+            allUniqueNames.addAll(deck1Only.keySet());
+            allUniqueNames.addAll(deck2Only.keySet());
+            allUniqueNames.addAll(inBoth.keySet());
+
+            Map<String, CardData> cardDataCache = new HashMap<>();
+
+            for (String cardName : allUniqueNames) {
+                CardData data = CardDataProvider.fetchCardData(cardName);
+                if (data != null) {
+                    cardDataCache.put(cardName, data);
+                }
+            }
+
             // Compute type count changes
             Map<String, int[]> typeChanges  = DeckComparer.computeTypeDifferences(deck1Map, deck2Map);
 
@@ -115,13 +132,13 @@ public class DeckListDifferServer {
 
             // Detailed
             DownloadService.saveFile("deck1_only_detailed.txt",
-            CardGrouping.buildDetailedTxtFile(deck1Only));
+            CardGrouping.buildDetailedTxtFile(deck1Only, cardDataCache));
 
             DownloadService.saveFile("deck2_only_detailed.txt",
-            CardGrouping.buildDetailedTxtFile(deck2Only));
+            CardGrouping.buildDetailedTxtFile(deck2Only, cardDataCache));
 
             DownloadService.saveFile("common_cards_detailed.txt",
-            CardGrouping.buildDetailedTxtFile(inBoth));
+            CardGrouping.buildDetailedTxtFile(inBoth, cardDataCache));
 
             return HtmlBuilder.buildResultsPage(
                 deck1Only,
@@ -130,7 +147,8 @@ public class DeckListDifferServer {
                 deck1Types,
                 deck2Types,
                 deck1DiffCost,
-                deck2DiffCost
+                deck2DiffCost,
+                cardDataCache
             );
         }); 
         // ===== Download Route =====

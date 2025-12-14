@@ -40,19 +40,23 @@ public class CardGrouping {
      *    White → ["1 Cloud, Midgar Mercenary"]
      *    Blue  → ["1 Aether Adept"]
      *
-     * @param cardMap
+     * @param cardCounts
+     * @param cardDataMap
      * @return map of primary type then by color category(s) then cards
      */
-    public static Map<String, Map<String, List<String>>> groupTypeThenColor(Map<String, Integer> cardMap) {
+    public static Map<String, Map<String, List<String>>> groupTypeThenColor(Map<String, Integer> cardCounts, Map<String, CardData> cardDataMap) {
 
         Map<String, Map<String, List<String>>> res = new LinkedHashMap<>();
 
-        for (Map.Entry<String, Integer> entry : cardMap.entrySet()) {
-
+        for (Map.Entry<String, Integer> entry : cardCounts.entrySet()) {
             String card = entry.getKey();
             int count = entry.getValue();
 
-            CardData data = CardDataProvider.fetchCardData(card);
+            CardData data = cardDataMap.get(card);
+            if (data == null){
+                continue;
+            }
+
             String primaryType = data.primaryType;
             String colorCategory = data.colorCategory;
 
@@ -70,16 +74,15 @@ public class CardGrouping {
      * Builds a grouped HTML block for the given cards.
      *
      * @param cardMap
+     * @param cardDataMap
      * @return block of html representing grouped card data
      */
-    public static String buildGroupedHtml(Map<String, Integer> cardMap) {
-
-        Map<String, CardData> dataCache = new HashMap<>();
+    public static String buildGroupedHtml(Map<String, Integer> cardMap, Map<String, CardData> cardDataMap) {
 
         StringBuilder html = new StringBuilder();
 
         // Group cards: primary type -> color -> labels
-        Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap);
+        Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap, cardDataMap);
 
         // Sort primary types by priority
         List<String> primaryTypes = new ArrayList<>(grouped.keySet());
@@ -133,13 +136,10 @@ public class CardGrouping {
                         cardName = label.substring(idx + 1).trim();
                     }
 
-                    String nameKey = cardName.toLowerCase();
-                    final String lookupName = cardName;
-
-                    CardData data = dataCache.computeIfAbsent(
-                        nameKey,
-                        k -> CardDataProvider.fetchCardData(lookupName)
-                    );
+                    CardData data = cardDataMap.get(cardName);
+                    if (data == null){
+                        continue;
+                    }
 
                     html.append("<a class='card-link' href='")
                         .append(data.scryfallUrl)
@@ -213,13 +213,14 @@ public class CardGrouping {
      * 3 Aether Adept
      *
      * @param cardMap
+     * @param cardDataMap
      * @return grouped txt representation
      */
-    public static String buildDetailedTxtFile(Map<String, Integer> cardMap) {
+    public static String buildDetailedTxtFile(Map<String, Integer> cardMap, Map<String, CardData> cardDataMap) {
 
         StringBuilder sb = new StringBuilder();
 
-        Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap);
+        Map<String, Map<String, List<String>>> grouped = groupTypeThenColor(cardMap, cardDataMap);
 
         // Sort primary types
         List<String> primaryTypes = new ArrayList<>(grouped.keySet());

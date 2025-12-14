@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.deckdiffer.cards.CardData;
 import com.deckdiffer.grouping.CardGrouping;
 import com.deckdiffer.parsing.DeckParser;
 import com.deckdiffer.stats.DeckStats;
@@ -44,7 +45,8 @@ public class HtmlBuilder {
             Map<String, Integer> deck1TypeCounts,
             Map<String, Integer> deck2TypeCounts,
             double deck1DiffCost,
-            double deck2DiffCost)
+            double deck2DiffCost,
+            Map<String, CardData> cardDataCache)
     {
         // Compute all deck stats in one call per deck
         DeckStat stats1 = DeckStats.computeDeckStats(deck1Only, common);
@@ -232,7 +234,7 @@ public class HtmlBuilder {
             </textarea>
             <div class='section-content' id='sec1'>
         """);
-        html.append(CardGrouping.buildGroupedHtml(deck1Only));
+        html.append(CardGrouping.buildGroupedHtml(deck1Only, cardDataCache));
         html.append("</div><hr>");
 
         /* Deck 2 Only */
@@ -249,7 +251,7 @@ public class HtmlBuilder {
             </textarea>
             <div class='section-content' id='sec2'>
         """);
-        html.append(CardGrouping.buildGroupedHtml(deck2Only));
+        html.append(CardGrouping.buildGroupedHtml(deck2Only, cardDataCache));
         html.append("</div><hr>");
 
         /* Common Cards */
@@ -266,7 +268,7 @@ public class HtmlBuilder {
             </textarea>
             <div class='section-content' id='sec3'>
         """);
-        html.append(CardGrouping.buildGroupedHtml(common));
+        html.append(CardGrouping.buildGroupedHtml(common, cardDataCache));
         html.append("</div>");
 
         /* Embed Download Links */
