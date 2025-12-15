@@ -52,8 +52,8 @@ public class HtmlBuilder {
         DeckStat stats1 = DeckStats.computeDeckStats(deck1Only, common);
         DeckStat stats2 = DeckStats.computeDeckStats(deck2Only, common);
 
-        ManaStats d1 = stats1.mana;
-        ManaStats d2 = stats2.mana;
+        ManaStats d1 = stats1.manaStats;
+        ManaStats d2 = stats2.manaStats;
 
         StringBuilder html = new StringBuilder();
 

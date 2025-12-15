@@ -6,9 +6,6 @@
  */
 
 package com.deckdiffer.parsing;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.*;
 
 public class DeckParser {
@@ -17,8 +14,17 @@ public class DeckParser {
     }
     
     /**
+     * Returns map representing a deck (card name -> card count) from multi-line string of txt
+     * 
+     * Ex:
+     * 1 Island
+     * 1 Mountain
+     * 1 Plains
+     * 
+     * becomes {{"Island", 1}, {"Mountain", 1}, {"Plains"}}
+     * 
      * @param deckText: Multi-line deck text
-     * @return Map<String, Integer> card name -> quant
+     * @return Map<String, Integer> mapping card name -> card count
      */
     public static Map<String, Integer> parseDeck(String deckText) {
         Map<String, Integer> map = new LinkedHashMap<>();
@@ -65,7 +71,7 @@ public class DeckParser {
     }
 
     /**
-     * @param cardMap
+     * @param cardMap - Map<String, Integer> epresenting a deck of cards (card name -> card count)
      * @return total number of cards in a card map
      */
     public static int sumCounts(Map<String, Integer> cardMap) {
@@ -77,43 +83,17 @@ public class DeckParser {
     }
 
     /**
-     * @param cardMap
-     * @return List<String> of card name -> count to representative line
-     * Ex: {Island} -> {3} to "3 Island"
-     */
-    public static List<String> mapToLines(Map<String, Integer> cardMap) {
-        List<String> lines = new ArrayList<>();
-        for (var entry : cardMap.entrySet()) {
-            lines.add(entry.getValue() + " " + entry.getKey());
-        }
-        return lines;
-    }
-
-    /**
-     * @param fileName
-     * @param lines
-     */
-    public static void writeToFile(String fileName, List<String> lines) {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(fileName))) {
-            for (String line : lines) {
-                bw.write(line);
-                bw.newLine();
-            }
-        } 
-        catch (IOException e) {
-            System.err.println("Error writing " + fileName + ": " + e.getMessage());
-        }
-    }
-
-    /**
     * Normalizes card names to a canonical form for comparison.
     * Strips off everything after "//" for MDFC / face cards
     * Makes for easier comparisons
+    * 
+    * @param cardMap - Map<String, Integer> epresenting a deck of cards (card name -> card count) 
+    * 
     */
-    public static Map<String, Integer> normalizeNames(Map<String, Integer> map) {
+    public static Map<String, Integer> normalizeNames(Map<String, Integer> cardMap) {
         Map<String, Integer> res = new LinkedHashMap<>();
 
-        for (var entry : map.entrySet()) {
+        for (var entry : cardMap.entrySet()) {
             String name = entry.getKey();
             int count = entry.getValue();
 
@@ -127,17 +107,5 @@ public class DeckParser {
             res.put(name, count);
         }
         return res;
-    }
-
-    /**
-     * @param label ex: "1 Island"
-     * @return ex: "Island"
-     */
-    public static String extractCardNameFromLabel(String label){
-        int idx = label.indexOf(' ');
-        if (idx > 0){
-            return label.substring(idx + 1).trim();
-        }
-        return label;
     }
 }

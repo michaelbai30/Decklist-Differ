@@ -1,3 +1,11 @@
+/**
+ * ScryfallBatchFetcher.java
+ * 
+ * Utility class for efficiently fetching raw MTG card data from the Scryfall API
+ * Uses the bulk POST '/cards/collection' endpoint to request up to 75 unique cards per network call
+ * This is far more efficient compared to individual API requests per card
+ */
+
 package com.deckdiffer.cards;
 
 import java.io.OutputStream;
@@ -21,7 +29,8 @@ public class ScryfallBatchFetcher {
 
     /**
      * Fetches raw Scryfall JSON objects in batches
-     * @param cardNames Set of unique card names to fetch
+     * 
+     * @param cardNames - Set of unique card names to fetch
      * @return Map of card names (strings) to its raw Scryfall JSON (JSONObject).
      */
     

@@ -27,7 +27,8 @@ public class CardClassifier {
  
     /**
      * By iterating through TYPE_PRIORITY in sequential order and returning when matched, we get the primary type
-     * @param types
+     * Ex: An "Artifact Creature" would be foremost categorized as a "Creature"
+     * @param types - The types of a card as a List<String>
      * @return String representing primary type Ex: "Creature"
      */
     public static String fetchPrimaryType(List<String> types){
@@ -40,7 +41,8 @@ public class CardClassifier {
     }
 
     /**
-     * @param type
+     * Maps a card type string to a numeric priority for sorting
+     * @param type - The primary type of a card
      * @return int representing sorting priority
      */
     public static int typeToPriority(String type){
@@ -54,12 +56,22 @@ public class CardClassifier {
     }
 
     /**
-     * @param colorIdentity
+     * Takes in a list of color identities from Scryfall and converts into a representative string
+     * 
+     * W = White
+     * U = Blue
+     * B = Black
+     * R = Red
+     * G = Green
+     * 
+     * WU = White and Blue etc...
+     * 
+     * @param colorIdentity - A list of strings representing the card's colors
      * @return string representing color identity with abbrevs
      * ex: {"W", "U"} -> "WU"
      * {"W"} -> "White"
      */
-    public static String assignColorCategory(List<String> colorIdentity){
+    public static String assignColorCategoryAsString(List<String> colorIdentity){
         if (colorIdentity == null || colorIdentity.isEmpty()){
             return "Colorless";
         }
@@ -81,6 +93,7 @@ public class CardClassifier {
     }
 
     /**
+     * Maps a color identity string to its sorting priority in WUBRG canonical order
      * @param colors as a string
      * @return int representing sorting priority
      */

@@ -1,6 +1,9 @@
-/* CardData.java: 
-- Model for a given card
-- Populated after JSON is downloaded from Scryfall and relevant fields are extracted*/
+/**
+ * CardData.java:
+ * 
+ * Provides a model for a given card
+ * Populated after JSON is downloaded from Scryfall and relevant fields are extracted
+ */
 
 package com.deckdiffer.cards;
 import java.util.Map;

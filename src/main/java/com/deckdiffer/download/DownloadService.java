@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class DownloadService {
     // Stores ALL downloadable text files generated during comparison
+    // fileName -> content
     private static final Map<String, String> generatedFiles = new ConcurrentHashMap<>();
 
     private DownloadService() {}
@@ -21,8 +22,8 @@ public class DownloadService {
     /**
      * Saves or overwrites a text file entry.
      *
-     * @param fileName name of the file including ".txt"
-     * @param content full text contents of the file as string
+     * @param fileName - name of the file including ".txt" as string
+     * @param content - full text contents of the file as string
      */
     public static void saveFile(String fileName, String content) {
         if (fileName == null || fileName.isEmpty()) return;
@@ -33,8 +34,8 @@ public class DownloadService {
     /**
      * Retrieves the contents of a given file name
      *
-     * @param fileName file name including ".txt"
-     * @return full file text or null if missing
+     * @param fileName - file name including ".txt" as string
+     * @return full file text or null if missing as string
      */
     public static String getFile(String fileName) {
         return generatedFiles.get(fileName);
@@ -43,7 +44,7 @@ public class DownloadService {
     /**
      * Check whether downloadable file exists
      *
-     * @param fileName file name including ".txt"
+     * @param fileName - file name including ".txt" as string
      * @return true if file is stored
      */
     public static boolean exists(String fileName) {

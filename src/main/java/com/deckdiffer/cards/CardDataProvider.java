@@ -6,7 +6,7 @@
  * Responsibilities:
  * - Perform fuzzy-name Scryfall API lookups
  * - Cache JSON to minimize repeated API calls
- * - Build structured CardData objects to be used in CardDataInfo etc..
+ * - Build structured CardData objects
  * - Contains methods to extract relevant card fields
  */
 
@@ -23,7 +23,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class CardDataProvider {
-
     private static final Map<String, JSONObject> cardJsonCache = new ConcurrentHashMap<>();
     private static final Map<String, CardData> cardDataCache = new ConcurrentHashMap<>();
 
@@ -39,7 +38,8 @@ public class CardDataProvider {
     /**
      * Populates the cache using the fast batch API for all required cards.
      * DeckListDifferServer calls this method just once per comparison.
-     * @param cardNames
+     * 
+     * @param cardNames - A set of strings representing names of cards
      */
     public static void populateCacheInBatch(Set<String> cardNames) {
         // Don't include names already in the cache
@@ -70,10 +70,60 @@ public class CardDataProvider {
     }
 
     /**
-     * @param cardName: the name of the card to query
+     * Fetches card data from either the cardDataCache or calls fetchCardJson to call API
+     * 
+     * @param cardName
+     * @return CardData object extracted from cache or fetchCardJson
+     */
+    public static CardData fetchCardData(String cardName) {
+        String key = cardName.toLowerCase();
+
+        if (cardDataCache.containsKey(key)) {
+            return cardDataCache.get(key);
+        }
+
+        JSONObject json = cardJsonCache.get(key);
+
+        // if no JSON, fetch it (slow fallback)
+        if (json == null) {
+             json = fetchCardJson(cardName);
+        }
+
+        CardData data;
+
+        if (json == null) {
+            data = new CardData(
+                null,
+                List.of(),
+                "Other",
+                List.of(),
+                "Colorless",
+                0.0,
+                null,
+                null,
+                0.0,
+                Map.of()
+            );
+        }
+        else {
+            data = buildCardDataFromJson(json);
+        }
+
+        cardDataCache.put(key, data);
+        return data;
+    }
+
+    // ---------------
+    // Helper Methods
+    // ---------------
+
+    /**
+     * Performs fuzzy-name Scryfall API request for a given card (cardName) and returns JSON from endpoint
+     * 
+     * @param cardName - the name of the card to query as a string
      * @return JSONObject representing Scryfall card data
      */
-    static JSONObject fetchCardJson(String cardName) {
+    private static JSONObject fetchCardJson(String cardName) {
         String key = cardName.toLowerCase();
 
         if (cardJsonCache.containsKey(key)) {
@@ -109,53 +159,10 @@ public class CardDataProvider {
     }
 
     /**
-     * @param cardName
-     * @return CardData object extracted from cache or fetchCardJson
-     */
-    public static CardData fetchCardData(String cardName) {
-        String key = cardName.toLowerCase();
-
-        if (cardDataCache.containsKey(key)) {
-            return cardDataCache.get(key);
-        }
-
-        JSONObject json = cardJsonCache.get(key);
-        // if no JSON, fetch it (slow fallback)
-        if (json == null) {
-             json = fetchCardJson(cardName);
-        }
-
-        CardData data;
-
-        if (json == null) {
-            data = new CardData(
-                null,
-                List.of(),
-                "Other",
-                List.of(),
-                "Colorless",
-                0.0,
-                null,
-                null,
-                0.0,
-                Map.of()
-            );
-        }
-        else {
-            data = buildCardDataFromJson(json);
-        }
-
-        cardDataCache.put(key, data);
-        return data;
-    }
-
-    // ---------------
-    // Helper Methods
-    // ---------------
-
-    /**
-     * @param json
-     * @return CardData
+     * Builds and returns a CardData object from a card's json info
+     * 
+     * @param json - JSONObject representing a card's data, returned from Scryfall
+     * @return CardData - CardData object populated and returned (model from CardData.java)
      */
     private static CardData buildCardDataFromJson(JSONObject json) {
 
@@ -163,7 +170,7 @@ public class CardDataProvider {
         String primaryType = CardClassifier.fetchPrimaryType(types);
 
         List<String> colors = extractColorsFromJson(json);
-        String colorCategory = CardClassifier.assignColorCategory(colors);
+        String colorCategory = CardClassifier.assignColorCategoryAsString(colors);
 
         double price = extractPriceFromJson(json);
 
@@ -178,27 +185,29 @@ public class CardDataProvider {
     }
 
     /**
-     * @param card
+     * Extracts the cards types from json as a List<String>
+     * 
+     * @param json - JSONObject representing a card's data, returned from Scryfall
      * @return List of types from a card typeline
      */
-    public static List<String> extractTypesFromJson(JSONObject card) {
+    private static List<String> extractTypesFromJson(JSONObject json) {
         List<String> types = new ArrayList<>();
-        if (card == null) return types;
+        if (json == null) return types;
 
         String typeLine;
 
         // if card is MDFC
-        if (card.has("card_faces")) {
-            JSONArray faces = card.optJSONArray("card_faces");
+        if (json.has("card_faces")) {
+            JSONArray faces = json.optJSONArray("card_faces");
             if (faces.length() > 0) {
                 typeLine = faces.getJSONObject(0).optString("type_line", "");
             }
             else {
-                typeLine = card.optString("type_line", "");
+                typeLine = json.optString("type_line", "");
             }
         }     
         else {
-            typeLine = card.optString("type_line", "");
+            typeLine = json.optString("type_line", "");
         }
 
         // Relevant grouping types are found left of the -, which all cards have
@@ -215,15 +224,15 @@ public class CardDataProvider {
     }
 
     /**
-     * EX: {"White", "Black", "Blue"}
-     * @param card
-     * @return color identity list
+     * EX: {"White", "Black", "Blue"} - Non-abbreviated!
+     * @param json - JSONObject representing a card's data, returned from Scryfall
+     * @return color identity list as a List<String> directly from the JSON
      */
-    public static List<String> extractColorsFromJson(JSONObject card) {
+    private static List<String> extractColorsFromJson(JSONObject json) {
         List<String> res = new ArrayList<>();
-        if (card == null) return res;
+        if (json == null) return res;
 
-        JSONArray arr = card.optJSONArray("color_identity");
+        JSONArray arr = json.optJSONArray("color_identity");
         if (arr != null) {
             for (int i = 0; i < arr.length(); i++) {
                 res.add(arr.getString(i));
@@ -233,7 +242,9 @@ public class CardDataProvider {
     }
 
     /**
-     * @param json
+     * Extracts image URL from JSONObject image_uris field
+     * 
+     * @param json - JSONObject representing a card's data, returned from Scryfall
      * @return String containing image url of card
      */
     private static String extractImageUrl(JSONObject json) {
@@ -255,10 +266,12 @@ public class CardDataProvider {
     }
 
     /**
-     * @param JSONObject json representing card data from scryfall
+     * Extracts cards approximate price (TCGPlayer) in USD
+     * 
+     * @param json - JSONObject representing a card's data, returned from Scryfall
      * @return double price in USD
      */
-    public static double extractPriceFromJson(JSONObject json) {
+    private static double extractPriceFromJson(JSONObject json) {
         if (json == null) return 0.0;
 
         JSONObject prices = json.optJSONObject("prices");
@@ -275,19 +288,23 @@ public class CardDataProvider {
     }
 
     /**
-     * @param JSONObject json representing card data from scryfall
+     * Extracts cards converted mana cost (cmc) as a double
+     * 
+     * @param json - JSONObject representing a card's data, returned from Scryfall
      * @return double representing converted mana cost
      */
-    public static double extractCMC(JSONObject json){
+    private static double extractCMC(JSONObject json){
         if (json == null) return 0.0;
         return json.optDouble("cmc", 0.0);
     }
 
     /**
+     * Extracts cards colored mana cost as a Map<String, Integer>
+     * 
      * @param String manaCost
      * @return Map<String, Integer> mapping Mana color (WUBRG) to amount
      */
-    public static Map<String, Integer> parsePips(String manaCost){
+    private static Map<String, Integer> parsePips(String manaCost){
         Map<String, Integer> pipMap = new HashMap<>();
         String[] wubrg = {"W", "U", "B", "R", "G"};
         

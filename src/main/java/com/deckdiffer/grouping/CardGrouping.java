@@ -5,7 +5,7 @@
  * generating HTML sections for UI display, and producing detailed text output
  * for downloadable files.
  *
- * Uses CardClassifier + CardDataProvider to determine type and color data.
+ * Uses CardClassifier to determine type and color data.
  */
 
 package com.deckdiffer.grouping;
@@ -14,18 +14,16 @@ import java.util.*;
 
 import com.deckdiffer.cards.CardClassifier;
 import com.deckdiffer.cards.CardData;
-import com.deckdiffer.cards.CardDataProvider;
 
 public class CardGrouping {
-
     private CardGrouping() {}
 
     /**
      * Converts card name and count into a label for display.
      * Example: "1 Counterspell"
-     * @param cardName
-     * @param count
-     * @return label
+     * @param cardName - name of a card as a string
+     * @param count - the number of cards of that type in the deck
+     * @return label as a String formatted like "{card count} {card name}"
      */
     public static String buildDisplayLabel(String cardName, int count) {
         return count + " " + cardName;
@@ -40,8 +38,8 @@ public class CardGrouping {
      *    White → ["1 Cloud, Midgar Mercenary"]
      *    Blue  → ["1 Aether Adept"]
      *
-     * @param cardCounts
-     * @param cardDataMap
+     * @param cardCounts - map of card name to its count
+     * @param cardDataMap - map of card name to is data
      * @return map of primary type then by color category(s) then cards
      */
     public static Map<String, Map<String, List<String>>> groupTypeThenColor(Map<String, Integer> cardCounts, Map<String, CardData> cardDataMap) {
@@ -72,9 +70,11 @@ public class CardGrouping {
 
     /**
      * Builds a grouped HTML block for the given cards.
+     * grouped first by primary card type
+     * and then sub-grouped by color identity.
      *
-     * @param cardMap
-     * @param cardDataMap
+     * @param cardMap - Map of card names as a string and card count as a integer
+     * @param cardDataMap - Map of card names as a string and card data as CardData object
      * @return block of html representing grouped card data
      */
     public static String buildGroupedHtml(Map<String, Integer> cardMap, Map<String, CardData> cardDataMap) {
@@ -89,7 +89,6 @@ public class CardGrouping {
         primaryTypes.sort(Comparator.comparingInt(CardClassifier::typeToPriority));
 
         for (String type : primaryTypes) {
-
             int typeCount = 0;
             Map<String, List<String>> colors = grouped.get(type);
 
@@ -178,10 +177,11 @@ public class CardGrouping {
 
      /**
      * Text file format WITHOUT grouping.
+     * Each line: "{Card count} {Card Name}"
      * Sorted alphabetically.
      *
-     * @param cardMap: deck
-     * @return string txt representation of cards grouped by type and color
+     * @param cardMap - Map of card names as a string and card count as a integer
+     * @return String txt representation of cards grouped by type and color, sorted alphabetically within
      */
     public static String buildNonDetailedTxtFile(Map<String, Integer> cardMap) {
         StringBuilder sb = new StringBuilder();
@@ -201,9 +201,10 @@ public class CardGrouping {
     }
 
     /**
-     * Text file output WITH grouping:
+     * Text file output WITH grouping by primary type, then color category
+     * Includes count of cards within a primary type
+     * 
      * For example:
-     *
      * # CREATURE (12)
      * # WHITE
      * 2 Sun Titan
@@ -212,8 +213,8 @@ public class CardGrouping {
      * # BLUE
      * 3 Aether Adept
      *
-     * @param cardMap
-     * @param cardDataMap
+     * @param cardMap - Map of card names as a string and card count as a integer
+     * @param cardDataMap - Map of card names as a string and card data as CardData object
      * @return grouped txt representation
      */
     public static String buildDetailedTxtFile(Map<String, Integer> cardMap, Map<String, CardData> cardDataMap) {
@@ -226,8 +227,9 @@ public class CardGrouping {
         List<String> primaryTypes = new ArrayList<>(grouped.keySet());
         primaryTypes.sort(Comparator.comparingInt(CardClassifier::typeToPriority));
 
+        // Count number of cards in a primary type
+        // For example, if there are 12 creatures in the deck, Creature (12)
         for (String type : primaryTypes) {
-
             int typeCount = 0;
             Map<String, List<String>> colors = grouped.get(type);
 
@@ -240,17 +242,20 @@ public class CardGrouping {
                     }
                 }
             }
+            
+            // Write primary type and count
             sb.append("# ")
               .append(type.toUpperCase())
               .append(" (")
               .append(typeCount)
               .append(")\n");
 
+            // Sort by color key
             List<String> colorKeys = new ArrayList<>(colors.keySet());
             colorKeys.sort(Comparator.comparingInt(CardClassifier::colorSortKey));
 
+            // Group card label by its color category
             for (String color : colorKeys) {
-
                 sb.append("# ").append(color.toUpperCase()).append("\n");
 
                 List<String> cardLabels = colors.get(color);

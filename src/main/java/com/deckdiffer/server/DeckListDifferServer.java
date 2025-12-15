@@ -95,17 +95,21 @@ public class DeckListDifferServer {
             allUniqueNames.addAll(inBoth.keySet());
 
             CardDataProvider.populateCacheInBatch(allUniqueNames);
-            Map<String, CardData> cardDataCache = new HashMap<>();
+            
+            Map<String, CardData> localCardDataCache = new HashMap<>();
 
+            // populate cardDataCache
             for (String cardName : allUniqueNames) {
+                // checks global cardDataCache for existence
+                // performs slow fetch if DNE
                 CardData data = CardDataProvider.fetchCardData(cardName);
                 if (data != null) {
-                    cardDataCache.put(cardName, data);
+                    localCardDataCache.put(cardName, data);
                 }
             }
 
             // Compute type count changes
-            Map<String, int[]> typeChanges  = DeckComparer.computeTypeDifferences(deck1Map, deck2Map);
+            Map<String, int[]> typeChanges = DeckComparer.computeTypeDifferences(deck1Map, deck2Map);
 
             Map<String, Integer> deck1Types = new LinkedHashMap<>();
             Map<String, Integer> deck2Types = new LinkedHashMap<>();
@@ -115,6 +119,7 @@ public class DeckListDifferServer {
                 deck2Types.put(e.getKey(), e.getValue()[1]);
             }
 
+            // Compute Deck Stats
             DeckStats.DeckStat stats1 = DeckStats.computeDeckStats(deck1Only, inBoth);
             DeckStats.DeckStat stats2 = DeckStats.computeDeckStats(deck2Only, inBoth);
 
@@ -133,13 +138,13 @@ public class DeckListDifferServer {
 
             // Detailed
             DownloadService.saveFile("deck1_only_detailed.txt",
-            CardGrouping.buildDetailedTxtFile(deck1Only, cardDataCache));
+            CardGrouping.buildDetailedTxtFile(deck1Only, localCardDataCache));
 
             DownloadService.saveFile("deck2_only_detailed.txt",
-            CardGrouping.buildDetailedTxtFile(deck2Only, cardDataCache));
+            CardGrouping.buildDetailedTxtFile(deck2Only, localCardDataCache));
 
             DownloadService.saveFile("common_cards_detailed.txt",
-            CardGrouping.buildDetailedTxtFile(inBoth, cardDataCache));
+            CardGrouping.buildDetailedTxtFile(inBoth, localCardDataCache));
 
             return HtmlBuilder.buildResultsPage(
                 deck1Only,
@@ -149,7 +154,7 @@ public class DeckListDifferServer {
                 deck2Types,
                 deck1DiffCost,
                 deck2DiffCost,
-                cardDataCache
+                localCardDataCache
             );
         }); 
         // ===== Download Route =====
